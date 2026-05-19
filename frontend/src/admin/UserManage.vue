@@ -1,0 +1,25 @@
+<template>
+  <div class="admin-page">
+    <router-link to="/admin" class="back-link">← 返回后台</router-link>
+    <div class="page-title">用户管理</div>
+    <div class="card" style="margin-bottom:8px;padding:12px;">
+      <div style="font-weight:700;margin-bottom:8px;font-size:13px;">创建用户</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <input v-model="newUsername" class="input" placeholder="用户名" style="flex:1;min-width:100px;" />
+        <input v-model="newPassword" class="input" placeholder="密码" style="flex:1;min-width:100px;" />
+        <button class="btn btn-primary btn-sm" @click="createUser">创建</button>
+      </div>
+    </div>
+    <div class="card"><div class="table-wrap"><table class="table">
+      <thead><tr><th>用户名</th><th>昵称</th><th>金币</th><th>状态</th><th>创建</th><th>操作</th></tr></thead>
+      <tbody><tr v-for="u in store.adminUsers" :key="u.id">
+        <td style="font-weight:600;">{{ u.username }}</td><td>{{ u.nickname }}</td>
+        <td style="font-weight:700;color:var(--b365-green);">{{ u.coin_balance }}</td>
+        <td><span :class="'tag '+(u.status==='active'?'tag-green':'tag-red')">{{ u.status==='active'?'正常':'禁用' }}</span></td>
+        <td style="font-size:11px;color:var(--text-muted);">{{ u.created_at }}</td>
+        <td><button class="btn btn-danger btn-xs" @click="deleteUser(u.id)">删除</button></td>
+      </tr></tbody>
+    </table></div></div>
+  </div>
+</template>
+<script setup>import { ref, inject } from 'vue'; import { useAppStore } from '../stores/mockData'; const store = useAppStore(); const showToast = inject('showToast'); const newUsername = ref(''); const newPassword = ref(''); function createUser(){if(!newUsername.value||!newPassword.value){showToast('请填写账号和密码','error');return} store.adminUsers.push({id:Date.now(),username:newUsername.value,nickname:newUsername.value,coin_balance:0,status:'active',created_at:new Date().toISOString().slice(0,10)}); showToast('用户创建成功');newUsername.value='';newPassword.value=''} function deleteUser(id){const i=store.adminUsers.findIndex(u=>u.id===id);if(i>-1){store.adminUsers.splice(i,1);showToast('用户已删除')}}</script>

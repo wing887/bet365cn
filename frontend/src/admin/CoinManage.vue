@@ -1,0 +1,20 @@
+<template>
+  <div class="admin-page">
+    <router-link to="/admin" class="back-link">← 返回后台</router-link>
+    <div class="page-title">金币操作</div>
+    <div class="card" style="margin-bottom:8px;padding:12px;">
+      <div style="font-weight:700;margin-bottom:8px;font-size:13px;">增减金币</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <select v-model="selectedUser" class="input" style="flex:1;min-width:120px;"><option value="">选择用户</option><option v-for="u in store.adminUsers" :key="u.id" :value="u.id">{{ u.nickname }} ({{ u.coin_balance }})</option></select>
+        <input v-model.number="coinAmount" type="number" class="input" placeholder="金额" style="flex:1;min-width:100px;" />
+        <button class="btn btn-accent btn-sm" @click="doAdd">加金币</button>
+        <button class="btn btn-danger btn-sm" @click="doDeduct">减金币</button>
+      </div>
+    </div>
+    <div class="card"><div class="table-wrap"><table class="table">
+      <thead><tr><th>用户</th><th>当前金币</th></tr></thead>
+      <tbody><tr v-for="u in store.adminUsers" :key="u.id"><td>{{ u.nickname }}</td><td style="font-weight:700;color:var(--b365-green);">{{ u.coin_balance }}</td></tr></tbody>
+    </table></div></div>
+  </div>
+</template>
+<script setup>import { ref, inject } from 'vue'; import { useAppStore } from '../stores/mockData'; const store = useAppStore(); const showToast = inject('showToast'); const selectedUser = ref(''); const coinAmount = ref(0); function doAdd(){if(!selectedUser.value||coinAmount.value<=0){showToast('请选择用户并输入正数','error');return}store.addCoins(selectedUser.value,coinAmount.value);showToast('金币增加成功')} function doDeduct(){if(!selectedUser.value||coinAmount.value<=0){showToast('请选择用户并输入正数','error');return}store.addCoins(selectedUser.value,-coinAmount.value);showToast('金币扣减成功')}</script>
