@@ -18,7 +18,7 @@ def create_token(user_id: int, role: str, is_admin: bool = False) -> dict:
     """生成 JWT token"""
     exp = datetime.utcnow() + timedelta(seconds=current_app.config['JWT_ACCESS_TOKEN_EXPIRES'])
     payload = {
-        'sub': user_id,
+        'sub': str(user_id),
         'role': role,
         'is_admin': is_admin,
         'exp': exp.timestamp(),
@@ -49,7 +49,7 @@ def login_required(f):
             payload = decode_token(token)
             if payload.get('is_admin'):
                 return jsonify({'error': '请使用用户账号'}), 403
-            request.current_user_id = payload['sub']
+            request.current_user_id = int(payload['sub'])
             request.current_user_role = payload['role']
         except jwt.ExpiredSignatureError:
             return jsonify({'error': '登录已过期'}), 401
@@ -71,7 +71,7 @@ def admin_required(f):
             payload = decode_token(token)
             if not payload.get('is_admin'):
                 return jsonify({'error': '需要管理员权限'}), 403
-            request.current_user_id = payload['sub']
+            request.current_user_id = int(payload['sub'])
             request.current_user_role = payload['role']
         except jwt.ExpiredSignatureError:
             return jsonify({'error': '登录已过期'}), 401
@@ -93,7 +93,7 @@ def super_admin_required(f):
             payload = decode_token(token)
             if not payload.get('is_admin') or payload.get('role') != 'super_admin':
                 return jsonify({'error': '需要超级管理员权限'}), 403
-            request.current_user_id = payload['sub']
+            request.current_user_id = int(payload['sub'])
             request.current_user_role = payload['role']
         except jwt.ExpiredSignatureError:
             return jsonify({'error': '登录已过期'}), 401

@@ -43,6 +43,32 @@ def create_app(config=None):
         def health():
             return {'status': 'healthy'}
 
+        # ===== 注册蓝图 =====
+        from routes.user_auth import user_auth_bp
+        from routes.matches import matches_bp
+        from routes.bets import bets_bp
+        from routes.user_center import user_center_bp
+        
+        app.register_blueprint(user_auth_bp)
+        app.register_blueprint(matches_bp)
+        app.register_blueprint(bets_bp)
+        app.register_blueprint(user_center_bp)
+
+        # 管理端蓝图
+        from admin.admin_auth import admin_auth_bp
+        from admin.users import users_bp
+        from admin.coins import coins_bp
+        from admin.settlements import settlements_bp
+        from admin.admins import admins_bp
+        from admin.logs import logs_bp
+
+        app.register_blueprint(admin_auth_bp)
+        app.register_blueprint(users_bp)
+        app.register_blueprint(coins_bp)
+        app.register_blueprint(settlements_bp)
+        app.register_blueprint(admins_bp)
+        app.register_blueprint(logs_bp)
+
         # ===== 手动触发同步（调试用）=====
         @app.route('/api/sync/matches')
         def api_sync_matches():
