@@ -17,20 +17,20 @@ import Logs from '../admin/Logs.vue'
 import Stats from '../admin/Stats.vue'
 
 const routes = [
-  { path: '/', name: 'home', component: Home, meta: { title: 'bet365cn' } },
-  { path: '/match/:id', name: 'match', component: MatchDetail, meta: { title: '比赛详情' } },
-  { path: '/my-bets', name: 'bets', component: MyBets, meta: { title: '我的下注' } },
-  { path: '/my-coins', name: 'coins', component: MyCoins, meta: { title: '金币记录' } },
+  { path: '/', name: 'home', component: Home, meta: { title: 'bet365cn', requiresAuth: true } },
+  { path: '/match/:id', name: 'match', component: MatchDetail, meta: { title: '比赛详情', requiresAuth: true } },
+  { path: '/my-bets', name: 'bets', component: MyBets, meta: { title: '我的下注', requiresAuth: true } },
+  { path: '/my-coins', name: 'coins', component: MyCoins, meta: { title: '金币记录', requiresAuth: true } },
   { path: '/login', name: 'login', component: Login, meta: { title: '登录' } },
-  { path: '/profile', name: 'profile', component: Profile, meta: { title: '个人中心' } },
+  { path: '/profile', name: 'profile', component: Profile, meta: { title: '个人中心', requiresAuth: true } },
   { path: '/admin/login', name: 'adminLogin', component: AdminLogin, meta: { title: '管理员登录' } },
-  { path: '/admin', name: 'admin', component: Dashboard, meta: { title: '管理后台' } },
-  { path: '/admin/users', name: 'adminUsers', component: UserManage, meta: { title: '用户管理' } },
-  { path: '/admin/coins', name: 'adminCoins', component: CoinManage, meta: { title: '金币操作' } },
-  { path: '/admin/settlements', name: 'adminSettlements', component: Settlement, meta: { title: '结算管理' } },
-  { path: '/admin/admins', name: 'adminAdmins', component: AdminManage, meta: { title: '管理员管理' } },
-  { path: '/admin/logs', name: 'adminLogs', component: Logs, meta: { title: '操作日志' } },
-  { path: '/admin/stats', name: 'adminStats', component: Stats, meta: { title: '金币统计' } },
+  { path: '/admin', name: 'admin', component: Dashboard, meta: { title: '管理后台', requiresAdmin: true } },
+  { path: '/admin/users', name: 'adminUsers', component: UserManage, meta: { title: '用户管理', requiresAdmin: true } },
+  { path: '/admin/coins', name: 'adminCoins', component: CoinManage, meta: { title: '金币操作', requiresAdmin: true } },
+  { path: '/admin/settlements', name: 'adminSettlements', component: Settlement, meta: { title: '结算管理', requiresAdmin: true } },
+  { path: '/admin/admins', name: 'adminAdmins', component: AdminManage, meta: { title: '管理员管理', requiresAdmin: true } },
+  { path: '/admin/logs', name: 'adminLogs', component: Logs, meta: { title: '操作日志', requiresAdmin: true } },
+  { path: '/admin/stats', name: 'adminStats', component: Stats, meta: { title: '金币统计', requiresAdmin: true } },
 ]
 
 const router = createRouter({
@@ -41,8 +41,31 @@ const router = createRouter({
   }
 })
 
-router.beforeEach((to) => {
+router.beforeEach((to, from, next) => {
   document.title = to.meta.title || 'bet365cn'
+
+  // 用户端登录检查
+  const hasToken = !!localStorage.getItem('token')
+  const isUser = !!localStorage.getItem('user')
+  const isAdmin = !!localStorage.getItem('admin_user')
+
+  if (to.meta.requiresAuth && !(hasToken && isUser)) {
+    return next('/login')
+  }
+
+  if (to.meta.requiresAdmin && !(hasToken && isAdmin)) {
+    return next('/admin/login')
+  }
+
+  // 已登录不能访问登录页
+  if (to.path === '/login' && hasToken && isUser) {
+    return next('/')
+  }
+  if (to.path === '/admin/login' && hasToken && isAdmin) {
+    return next('/admin')
+  }
+
+  next()
 })
 
 export default router

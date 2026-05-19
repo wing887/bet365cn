@@ -9,41 +9,59 @@ logger = logging.getLogger(__name__)
 
 
 class OddsApiCollector:
-    """odds-api.io 数据采集器"""
+    """odds-api.io 数据采集器（双 Key 自动轮换）"""
 
-    def __init__(self, api_key: str, proxy: str = None):
+    def __init__(self, api_keys: list, proxy: str = None):
         self.base_url = 'https://api.odds-api.io/v3'
-        self.api_key = api_key
+        self.api_keys = api_keys
+        self.current_key_idx = 0
         self.proxies = {'http': proxy, 'https': proxy} if proxy else None
         self.request_count = 0
         self.rate_limit_remaining = 200
 
+    def _get_key(self) -> str:
+        return self.api_keys[self.current_key_idx]
+
+    def _switch_key(self) -> bool:
+        if self.current_key_idx < len(self.api_keys) - 1:
+            self.current_key_idx += 1
+            return True
+        return False
+
     def _fetch(self, endpoint: str, params: dict = None) -> dict:
-        """发送 API 请求"""
+        """发送 API 请求（支持 Key 轮换 + 401 自动切换）"""
         url = f'{self.base_url}{endpoint}'
         params = params or {}
-        params['apiKey'] = self.api_key
-
-        try:
-            resp = requests.get(url, params=params, proxies=self.proxies, timeout=60)
-            resp.raise_for_status()
-            self.request_count += 1
-
-            remaining = resp.headers.get('x-ratelimit-remaining')
-            if remaining:
-                self.rate_limit_remaining = int(remaining)
-
-            return resp.json()
-        except requests.exceptions.HTTPError as e:
-            status = e.response.status_code if hasattr(e, 'response') else None
-            if status == 404:
-                logger.debug(f'API 404 (无数据): {endpoint}')
-                return []
-            logger.error(f'API 请求失败 [{status}]: {endpoint} — {e}')
-            raise
-        except requests.exceptions.RequestException as e:
-            logger.error(f'网络请求失败: {endpoint} — {e}')
-            raise
+        
+        for attempt in range(len(self.api_keys)):
+            params['apiKey'] = self._get_key()
+            
+            try:
+                resp = requests.get(url, params=params, proxies=self.proxies, timeout=60)
+                
+                if resp.status_code == 401:
+                    if self._switch_key():
+                        continue
+                    raise Exception('所有 API key 已失效')
+                
+                resp.raise_for_status()
+                self.request_count += 1
+                
+                remaining = resp.headers.get('x-ratelimit-remaining')
+                if remaining:
+                    self.rate_limit_remaining = int(remaining)
+                
+                return resp.json()
+                
+            except requests.exceptions.HTTPError as e:
+                status = e.response.status_code if hasattr(e, 'response') else None
+                if status == 404:
+                    return []
+                if status == 429:
+                    raise
+                raise
+            except requests.exceptions.RequestException:
+                raise
 
     def fetch_events(
         self,

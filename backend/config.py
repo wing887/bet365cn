@@ -18,8 +18,14 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-change-me')
     JWT_ACCESS_TOKEN_EXPIRES = 86400  # 24小时
     
-    # Odds-API.io
-    ODDS_API_KEY = os.environ.get('ODDS_API_KEY', 'cbed45cdeb7ea196b7ba4335757cf3d4beaf6654ee2b73b30a29fd2c2b38e46b')
+    # Odds-API.io（双 Key 自动轮换）
+    ODDS_API_KEYS = [
+        key.strip() for key in os.environ.get(
+            'ODDS_API_KEYS',
+            'cbed45cdeb7ea196b7ba4335757cf3d4beaf6654ee2b73b30a29fd2c2b38e46b,'
+            'a26c35648273b834d344da959c383d9700e75e5279d574b81a61887f16b6ea9b'
+        ).split(',') if key.strip()
+    ]
     ODDS_API_BASE = 'https://api.odds-api.io/v3'
     ODDS_API_PROXY = os.environ.get('ODDS_API_PROXY', 'http://172.18.176.1:10808')
     

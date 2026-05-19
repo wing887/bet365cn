@@ -29,7 +29,7 @@ BOOKMAKERS = ['Bet365']
 def _get_collector(app):
     """获取采集器实例"""
     return OddsApiCollector(
-        api_key=app.config['ODDS_API_KEY'],
+        api_keys=app.config['ODDS_API_KEYS'],
         proxy=app.config.get('ODDS_API_PROXY'),
     )
 

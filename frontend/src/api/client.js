@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:5001',
+  baseURL: '',  // 使用相对路径，Nginx 统一代理，手机也能访问
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
