@@ -107,31 +107,44 @@ def sync_odds():
     """
     拉取 pending 比赛的赔率（仅限今日赛事）
     频率：每 10 分钟
+    增量commit：每5场提交一次，避免超时丢失全部结果
     """
     from flask import current_app
     app = current_app._get_current_object()
     collector = _get_collector(app)
 
-    # 仅今日 pending/live 的比赛（减少 API 调用量）
+    # 仅今日 pending/live 的比赛，优先处理尚无赔率的
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    matches = Match.query.filter(
+    
+    # 无赔率的比赛优先
+    matches_without_odds = Match.query.filter(
         Match.status.in_(['pending', 'live']),
         Match.match_date >= today,
-    ).limit(50).all()  # 最多50场，留足余量
-    logger.info(f'开始同步赔率: {len(matches)} 场今日比赛...')
+        ~Match.id.in_(db.session.query(Odds.match_id).distinct())
+    ).limit(50).all()
+    
+    # 已有赔率的比赛（更新）
+    matches_with_odds = Match.query.filter(
+        Match.status.in_(['pending', 'live']),
+        Match.match_date >= today,
+        Match.id.in_(db.session.query(Odds.match_id).distinct())
+    ).limit(20).all()
+    
+    matches = matches_without_odds + matches_with_odds
+    logger.info(f'开始同步赔率: {len(matches)} 场今日比赛 (新={len(matches_without_odds)}, 更新={len(matches_with_odds)})')
 
     updated = 0
+    batch_size = 5
     for i, match in enumerate(matches):
-        # 限速：每秒最多 2 个请求（200次/小时安全线）
+        # 限速：300次/h安全线，每10秒2个请求
         if i > 0 and i % 2 == 0:
-            time.sleep(1.2)
+            time.sleep(1.0)
         
         try:
             odds_data = collector.fetch_odds(match.event_id, BOOKMAKERS)
 
             for bm_name, markets in odds_data.items():
                 for market_type, odds_json in markets.items():
-                    # Upsert: 查找已有赔率记录
                     existing = Odds.query.filter_by(
                         match_id=match.id,
                         bookmaker=bm_name,
@@ -155,7 +168,11 @@ def sync_odds():
             logger.warning(f'赔率获取失败 [{match.event_id}]: {e}')
             continue
 
-    db.session.commit()
+        # 增量提交：每 batch_size 场或最后一场
+        if (i + 1) % batch_size == 0 or i == len(matches) - 1:
+            db.session.commit()
+            logger.info(f'赔率进度: {i+1}/{len(matches)} 场, 已更新 {updated} 条')
+
     logger.info(f'赔率同步完成: 更新 {updated} 条')
 
 

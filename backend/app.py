@@ -69,26 +69,42 @@ def create_app(config=None):
         app.register_blueprint(admins_bp)
         app.register_blueprint(logs_bp)
 
-        # ===== 手动触发同步（调试用）=====
+        # ===== 手动触发同步（后台执行，避免超时）=====
+        import threading
+        
         @app.route('/api/sync/matches')
         def api_sync_matches():
-            try:
-                from services.sync_service import sync_matches
-                sync_matches()
-                return {'status': 'ok', 'action': 'sync_matches'}
-            except Exception as e:
-                logger.error(f'sync_matches 失败: {e}')
-                return {'status': 'error', 'message': str(e)}, 500
+            def _run():
+                with app.app_context():
+                    try:
+                        from services.sync_service import sync_matches
+                        sync_matches()
+                        logger.info('sync_matches 后台完成')
+                    except Exception as e:
+                        logger.error(f'sync_matches 失败: {e}')
+            threading.Thread(target=_run, daemon=True).start()
+            return {'status': 'ok', 'action': 'sync_matches', 'note': 'running in background'}
 
         @app.route('/api/sync/odds')
         def api_sync_odds():
-            try:
-                from services.sync_service import sync_odds
-                sync_odds()
-                return {'status': 'ok', 'action': 'sync_odds'}
-            except Exception as e:
-                logger.error(f'sync_odds 失败: {e}')
-                return {'status': 'error', 'message': str(e)}, 500
+            def _run():
+                with app.app_context():
+                    try:
+                        from services.sync_service import sync_odds
+                        sync_odds()
+                        logger.info('sync_odds 后台完成')
+                    except Exception as e:
+                        logger.error(f'sync_odds 失败: {e}')
+            threading.Thread(target=_run, daemon=True).start()
+            return {'status': 'ok', 'action': 'sync_odds', 'note': 'running in background'}
+
+        @app.route('/api/sync/status')
+        def api_sync_status():
+            """查询同步进度"""
+            return {
+                'matches_count': __import__('models').Match.query.count(),
+                'odds_count': __import__('models').Odds.query.count(),
+            }
 
         # ===== 启动定时任务 =====
         try:
