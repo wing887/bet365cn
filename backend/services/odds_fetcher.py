@@ -66,34 +66,31 @@ class OddsApiCollector:
     def fetch_events(
         self,
         sport: str = 'football',
-        leagues: list = None,
+        league_slug: str = None,
         status_filter: str = None,
     ) -> List[dict]:
         """
-        获取比赛列表
-        leagues: [('英超', 'england-premier-league'), ...]
+        获取比赛列表（单联赛单次请求，避免超时）
+        league_slug: 'england-premier-league' 等
         status_filter: 'pending' | 'live' | None (all)
         """
         params = {'sport': sport}
+        if league_slug:
+            params['league'] = league_slug  # API 原生过滤，响应仅 ~3KB，1秒内完成
         if status_filter:
             params['status'] = status_filter
 
         raw = self._fetch('/events', params)
-        logger.info(f'API 返回 {len(raw)} 场足球比赛')
+        logger.info(f'API 返回 {len(raw)} 场比赛 [{league_slug or "all"}]')
 
         events = []
-        target_slugs = {slug for _, slug in (leagues or [])}
-
         for e in raw:
-            slug = e.get('league', {}).get('slug', '')
-            if target_slugs and slug not in target_slugs:
-                continue
-
             status = e.get('status', '').lower()
             if status in ('cancelled',):
                 continue
 
             scores = e.get('scores', {}) or {}
+            slug = e.get('league', {}).get('slug', '')
             events.append({
                 'event_id': str(e['id']),
                 'home_team': e['home'],
@@ -115,7 +112,7 @@ class OddsApiCollector:
                 events[-1]['scores_p1_home'] = p1.get('home', 0) or 0
                 events[-1]['scores_p1_away'] = p1.get('away', 0) or 0
 
-        logger.info(f'筛选后 {len(events)} 场（目标联赛）')
+        logger.info(f'有效比赛 {len(events)} 场 [{league_slug or "all"}]')
         return events
 
     def fetch_odds(

@@ -36,7 +36,7 @@ def _get_collector(app):
 
 def sync_matches():
     """
-    拉取五大联赛+世界杯的比赛数据
+    拉取五大联赛+世界杯的比赛数据（逐联赛请求，避免超时）
     频率：每 30 分钟
     """
     from flask import current_app
@@ -44,17 +44,24 @@ def sync_matches():
     collector = _get_collector(app)
 
     logger.info('开始同步比赛数据...')
-    try:
-        events = collector.fetch_events(sport='football', leagues=LEAGUES)
-    except Exception as e:
-        logger.warning(f'比赛数据获取失败（可能限流）: {e}')
+    all_events = []
+    for league_name, league_slug in LEAGUES:
+        try:
+            events = collector.fetch_events(sport='football', league_slug=league_slug)
+            all_events.extend(events)
+        except Exception as e:
+            logger.warning(f'{league_name} 数据获取失败: {e}')
+            continue
+
+    if not all_events:
+        logger.warning('所有联赛数据获取失败')
         return
 
     updated = 0
     new = 0
     settled = 0
 
-    for e in events:
+    for e in all_events:
         match = Match.query.filter_by(event_id=e['event_id']).first()
 
         if match:
@@ -165,20 +172,27 @@ def check_settled():
     # 查 pending/live 的比赛，看是否已变为 settled
     active_matches = Match.query.filter(Match.status.in_(['pending', 'live'])).all()
 
-    # 批量拉取所有足球 settled 状态
-    try:
-        events = collector.fetch_events(sport='football', leagues=LEAGUES, status_filter='settled')
-    except Exception as e:
-        logger.warning(f'获取已结算比赛失败: {e}')
+    # 逐联赛拉取 settled 比赛
+    all_events = []
+    for league_name, league_slug in LEAGUES:
+        try:
+            events = collector.fetch_events(sport='football', league_slug=league_slug, status_filter='settled')
+            all_events.extend(events)
+        except Exception as e:
+            logger.warning(f'{league_name} settled 查询失败: {e}')
+            continue
+
+    if not all_events:
+        logger.warning('所有联赛 settled 数据获取失败')
         return
 
-    settled_ids = {e['event_id'] for e in events}
+    settled_ids = {e['event_id'] for e in all_events}
     updated = 0
 
     for match in active_matches:
         if match.event_id in settled_ids:
             # 找到对应事件，更新比分
-            evt = next((e for e in events if e['event_id'] == match.event_id), None)
+            evt = next((e for e in all_events if e['event_id'] == match.event_id), None)
             if evt:
                 match.status = 'settled'
                 match.scores_home = evt['scores_home']
