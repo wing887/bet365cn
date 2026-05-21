@@ -179,6 +179,7 @@ class TeamNameMap(db.Model):
     league_name = db.Column(db.String(100), nullable=False)
     name_en = db.Column(db.String(100), nullable=False)  # API 英文名
     name_cn = db.Column(db.String(50), nullable=False)   # 中文名
+    logo_id = db.Column(db.String(10), nullable=True)    # 队徽文件ID
     
     __table_args__ = (
         db.UniqueConstraint('league_name', 'name_en', name='uq_team_name'),

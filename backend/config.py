@@ -23,7 +23,8 @@ class Config:
         key.strip() for key in os.environ.get(
             'ODDS_API_KEYS',
             'cbed45cdeb7ea196b7ba4335757cf3d4beaf6654ee2b73b30a29fd2c2b38e46b,'
-            'a26c35648273b834d344da959c383d9700e75e5279d574b81a61887f16b6ea9b'
+            'a26c35648273b834d344da959c383d9700e75e5279d574b81a61887f16b6ea9b,'
+            '5642057727ebd5163744ae40ef81b330df1f88df061463a5941cfcd25a4112c5'
         ).split(',') if key.strip()
     ]
     ODDS_API_BASE = 'https://api.odds-api.io/v3'

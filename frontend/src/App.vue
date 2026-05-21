@@ -58,7 +58,7 @@ provide('showToast', showToast)
 provide('store', store)
 
 onMounted(async () => {
-  store.restoreSession()
+  await store.restoreSession()
   if (store.isLoggedIn) {
     store.fetchProfile().catch(() => {})
   }

@@ -84,7 +84,7 @@ export const useAppStore = defineStore('app', () => {
     return res.data
   }
 
-  function restoreSession() {
+  async function restoreSession() {
     const t = localStorage.getItem('token')
     const u = localStorage.getItem('user')
     const a = localStorage.getItem('admin_user')
@@ -100,6 +100,23 @@ export const useAppStore = defineStore('app', () => {
       user.value = JSON.parse(u)
       isLoggedIn.value = true
       return true
+    }
+    // Dev mode: auto login with test account for real API data
+    if (import.meta.env.DEV) {
+      try {
+        const res = await api.post('/api/auth/login', { username: 'test', password: '123' })
+        token.value = res.data.token.access_token
+        user.value = res.data.user
+        isLoggedIn.value = true
+        localStorage.setItem('token', token.value)
+        localStorage.setItem('user', JSON.stringify(user.value))
+        return true
+      } catch (e) {
+        // Fallback to mock
+        isLoggedIn.value = true
+        user.value = { id: 1, username: 'test', nickname: '测试用户', coin_balance: 100000 }
+        return true
+      }
     }
     return false
   }
@@ -124,14 +141,34 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ===== User Actions =====
-  async function fetchMatches(status = 'all') {
+  async function fetchMatches(status = 'all', extraParams = {}) {
     loading.value = true
     try {
-      const res = await api.get('/api/matches', { params: { status } })
+      const params = { status, ...extraParams }
+      const res = await api.get('/api/matches', { params })
       matches.value = res.data.matches || []
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        matches.value = getMockMatches()
+      }
     } finally {
       loading.value = false
     }
+  }
+
+  function getMockMatches() {
+    return [
+      { id: 1, home_team: '曼城', away_team: '阿森纳', home_logo_id: '65', away_logo_id: '57', league_name_cn: '英超', league_name: 'England - Premier League', match_date: '2026-05-22T19:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
+      { id: 2, home_team: '拜仁慕尼黑', away_team: '多特蒙德', home_logo_id: '5', away_logo_id: '4', league_name_cn: '德甲', league_name: 'Germany - Bundesliga', match_date: '2026-05-22T19:30:00Z', status: 'live', scores_home: 1, scores_away: 0, has_odds: true },
+      { id: 3, home_team: '皇家马德里', away_team: '巴塞罗那', home_logo_id: '86', away_logo_id: '81', league_name_cn: '西甲', league_name: 'Spain - LaLiga', match_date: '2026-05-22T18:00:00Z', status: 'settled', scores_home: 3, scores_away: 1, has_odds: true },
+      { id: 4, home_team: '尤文图斯', away_team: '国际米兰', home_logo_id: '109', away_logo_id: '108', league_name_cn: '意甲', league_name: 'Italy - Serie A', match_date: '2026-05-22T20:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
+      { id: 5, home_team: '巴黎圣日耳曼', away_team: '里昂', home_logo_id: '524', away_logo_id: '523', league_name_cn: '法甲', league_name: 'France - Ligue 1', match_date: '2026-05-22T20:30:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
+      { id: 6, home_team: '利物浦', away_team: '切尔西', home_logo_id: '64', away_logo_id: '61', league_name_cn: '英超', league_name: 'England - Premier League', match_date: '2026-05-22T21:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
+      { id: 7, home_team: 'AC米兰', away_team: '那不勒斯', home_logo_id: '98', away_logo_id: '113', league_name_cn: '意甲', league_name: 'Italy - Serie A', match_date: '2026-05-22T18:30:00Z', status: 'settled', scores_home: 2, scores_away: 2, has_odds: true },
+      { id: 8, home_team: '马德里竞技', away_team: '塞维利亚', home_logo_id: '78', away_logo_id: '559', league_name_cn: '西甲', league_name: 'Spain - LaLiga', match_date: '2026-05-22T19:00:00Z', status: 'live', scores_home: 0, scores_away: 1, has_odds: true },
+      { id: 9, home_team: '莱斯特城', away_team: '南安普顿', home_logo_id: null, away_logo_id: '340', league_name_cn: '英超', league_name: 'England - Premier League', match_date: '2026-05-22T22:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: false },
+      { id: 10, home_team: '蒙扎', away_team: '威尼斯', home_logo_id: null, away_logo_id: null, league_name_cn: '意甲', league_name: 'Italy - Serie A', match_date: '2026-05-22T22:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: false },
+    ]
   }
 
   async function fetchMatchDetail(matchId) {
@@ -255,5 +292,6 @@ export const useAppStore = defineStore('app', () => {
     fetchPendingSettlements, confirmSettlement, cancelMatch,
     fetchAdminAccounts, createAdmin, deleteAdmin,
     fetchLogs, fetchStats,
+    getMockMatches,
   }
 })

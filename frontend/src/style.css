@@ -149,6 +149,43 @@ body {
   overflow: hidden;
 }
 
+/* ==================== LEAGUE FILTER ==================== */
+.league-filter {
+  display: flex;
+  gap: 4px;
+  margin: 6px 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.league-filter::-webkit-scrollbar { display: none; }
+.league-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.league-btn:active { transform: scale(0.95); }
+.league-btn.active {
+  background: var(--b365-green);
+  border-color: var(--b365-green);
+  color: var(--white);
+}
+.league-btn.disabled {
+  background: #F0F0F0;
+  border-color: #E0E0E0;
+  color: #BBB;
+  cursor: not-allowed;
+}
+.league-btn.disabled:active { transform: none; }
+
 /* ==================== STATUS TABS ==================== */
 .status-tabs {
   display: flex;
@@ -219,6 +256,63 @@ body {
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
+}
+
+/* Team Logo */
+.team-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 4px;
+}
+.team-logo-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--b365-green);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 auto 4px;
+}
+
+/* Match League Name (Chinese) */
+.match-league-name {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Odds Status */
+.match-card-has-odds {
+  border-color: #A5D6A7;
+}
+.match-card-no-odds {
+  border-style: dashed;
+  border-color: #DDD;
+  background: #FAFAFA;
+}
+.match-card-top-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.odds-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.odds-badge-yes {
+  background: var(--green-bg);
+  color: var(--green-text);
+}
+.odds-badge-no {
+  background: #F0F0F0;
+  color: var(--text-muted);
 }
 .match-vs-area {
   display: flex;
