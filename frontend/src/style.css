@@ -756,6 +756,21 @@ select.input { appearance: none; background: var(--white) url("data:image/svg+xm
 .login-logo span { color: var(--b365-yellow); }
 .login-form .input { margin-bottom: 10px; }
 .login-form .btn { margin-top: 6px; }
+.login-error {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
+}
+.login-user-link {
+  display: block;
+  text-align: center;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--b365-green);
+  text-decoration: none;
+  font-weight: 600;
+}
 
 /* ==================== EMPTY STATE ==================== */
 .empty-state {
@@ -797,3 +812,201 @@ select.input { appearance: none; background: var(--white) url("data:image/svg+xm
   font-weight: 800;
   margin: 0 auto 8px;
 }
+
+/* ==================== ADMIN V2 — 三级管理员新组件 ==================== */
+
+/* Admin Header */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 14px;
+}
+.admin-info {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 0 14px;
+  margin-top: -2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.agent-balance {
+  font-size: 12px;
+  color: var(--orange-text);
+  background: var(--orange-bg);
+  padding: 2px 10px;
+  border-radius: 10px;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+/* Role Tags */
+.role-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.role-super_admin { background: #FFF3E0; color: #E65100; }
+.role-admin { background: #E3F2FD; color: #1565C0; }
+.role-agent { background: #E8F5E9; color: #2E7D32; }
+
+/* Search Bar */
+.search-bar {
+  margin: 6px 10px;
+  padding: 10px 12px !important;
+  display: flex;
+  gap: 6px;
+}
+.search-bar .input { flex: 1; }
+
+/* Form Card */
+.form-card {
+  margin: 6px 10px;
+  padding: 12px !important;
+}
+.form-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.form-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.form-row .input { flex: 1; min-width: 80px; }
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.date-sep {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Action Buttons */
+.action-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.btn-warn {
+  background: #FFF3E0;
+  color: #E65100;
+  border: 1px solid #FFE0B2;
+}
+.btn-warn:hover { background: #FFE0B2; }
+.btn-green {
+  background: #E8F5E9;
+  color: #2E7D32;
+  border: 1px solid #C8E6C9;
+}
+.btn-green:hover { background: #C8E6C9; }
+
+/* Table Extra */
+.td-username { font-weight: 600; }
+.td-coins { font-weight: 700; color: var(--b365-green); }
+.td-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.td-detail { font-size: 12px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty-row {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 20px;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 300px;
+  overflow: hidden;
+}
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+.modal-body { padding: 14px 16px; }
+
+/* Recharge */
+.recharge-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Agent Balance Card */
+.agent-balance-card {
+  margin: 6px 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.balance-value {
+  font-size: 18px;
+  color: var(--b365-green);
+}
+.hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Settlement Extra */
+.settlement-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.settlement-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.settlement-card-mini {
+  margin: 6px 10px;
+  padding: 10px 14px;
+}
+.settlement-stats-row {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.settlement-hint {
+  padding: 6px 14px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-light);
+}
+
+/* Logout */
+.logout-wrap {
+  padding: 14px;
+  text-align: center;
+}
+
+/* Color Helpers */
+.green { color: var(--green-text); }
+.red { color: var(--red); }
+
+/* Select extra */
+.select-user { min-width: 140px; }
+.select-role { min-width: 80px; }

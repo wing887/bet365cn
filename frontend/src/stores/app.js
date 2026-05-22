@@ -7,6 +7,8 @@ export const useAppStore = defineStore('app', () => {
   const isLoggedIn = ref(false)
   const isAdminLoggedIn = ref(false)
   const isSuperAdmin = ref(false)
+  const isAdmin = ref(false)       // 管理（原普管）
+  const isAgent = ref(false)       // 代理
   const user = ref(null)
   const token = ref(null)
 
@@ -23,6 +25,20 @@ export const useAppStore = defineStore('app', () => {
   const adminAccounts = ref([])
   const pendingSettlements = ref([])
   const operationLogs = ref([])
+
+  // ===== Computed =====
+  const adminRole = computed(() => {
+    if (isSuperAdmin.value) return 'super_admin'
+    if (isAdmin.value) return 'admin'
+    if (isAgent.value) return 'agent'
+    return null
+  })
+
+  const canCreateAdmin = computed(() => isSuperAdmin.value)
+  const canCreateAgent = computed(() => isSuperAdmin.value || isAdmin.value)
+  const canViewAllUsers = computed(() => isSuperAdmin.value || isAdmin.value)
+  const canViewAllLogs = computed(() => isSuperAdmin.value || isAdmin.value)
+  const canSettle = computed(() => isSuperAdmin.value)
 
   // ===== Helpers =====
   function getMatchStatusText(status) {
@@ -62,6 +78,11 @@ export const useAppStore = defineStore('app', () => {
     return new Date(iso).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
+  function fullDateTime(iso) {
+    if (!iso) return '---'
+    return new Date(iso).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+  }
+
   // ===== Auth Actions =====
   async function loginUser(username, password) {
     const res = await api.post('/api/auth/login', { username, password })
@@ -76,11 +97,14 @@ export const useAppStore = defineStore('app', () => {
   async function loginAdmin(username, password) {
     const res = await api.post('/api/admin/auth/login', { username, password })
     token.value = res.data.token.access_token
-    user.value = res.data.admin
+    const ad = res.data.admin
+    user.value = ad
     isAdminLoggedIn.value = true
-    isSuperAdmin.value = res.data.admin.is_super_admin
+    isSuperAdmin.value = ad.is_super_admin || false
+    isAdmin.value = ad.is_admin || false
+    isAgent.value = ad.is_agent || false
     localStorage.setItem('token', token.value)
-    localStorage.setItem('admin_user', JSON.stringify(user.value))
+    localStorage.setItem('admin_user', JSON.stringify(ad))
     return res.data
   }
 
@@ -90,9 +114,12 @@ export const useAppStore = defineStore('app', () => {
     const a = localStorage.getItem('admin_user')
     if (t && a) {
       token.value = t
-      user.value = JSON.parse(a)
+      const ad = JSON.parse(a)
+      user.value = ad
       isAdminLoggedIn.value = true
-      isSuperAdmin.value = user.value?.is_super_admin || false
+      isSuperAdmin.value = ad.is_super_admin || false
+      isAdmin.value = ad.is_admin || false
+      isAgent.value = ad.is_agent || false
       return true
     }
     if (t && u) {
@@ -101,7 +128,6 @@ export const useAppStore = defineStore('app', () => {
       isLoggedIn.value = true
       return true
     }
-    // Dev mode: auto login with test account for real API data
     if (import.meta.env.DEV) {
       try {
         const res = await api.post('/api/auth/login', { username: 'test', password: '123' })
@@ -112,7 +138,6 @@ export const useAppStore = defineStore('app', () => {
         localStorage.setItem('user', JSON.stringify(user.value))
         return true
       } catch (e) {
-        // Fallback to mock
         isLoggedIn.value = true
         user.value = { id: 1, username: 'test', nickname: '测试用户', coin_balance: 100000 }
         return true
@@ -125,6 +150,8 @@ export const useAppStore = defineStore('app', () => {
     isLoggedIn.value = false
     isAdminLoggedIn.value = false
     isSuperAdmin.value = false
+    isAdmin.value = false
+    isAgent.value = false
     user.value = null
     token.value = null
     localStorage.removeItem('token')
@@ -166,8 +193,6 @@ export const useAppStore = defineStore('app', () => {
       { id: 6, home_team: '利物浦', away_team: '切尔西', home_logo_id: '64', away_logo_id: '61', league_name_cn: '英超', league_name: 'England - Premier League', match_date: '2026-05-22T21:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
       { id: 7, home_team: 'AC米兰', away_team: '那不勒斯', home_logo_id: '98', away_logo_id: '113', league_name_cn: '意甲', league_name: 'Italy - Serie A', match_date: '2026-05-22T18:30:00Z', status: 'settled', scores_home: 2, scores_away: 2, has_odds: true },
       { id: 8, home_team: '马德里竞技', away_team: '塞维利亚', home_logo_id: '78', away_logo_id: '559', league_name_cn: '西甲', league_name: 'Spain - LaLiga', match_date: '2026-05-22T19:00:00Z', status: 'live', scores_home: 0, scores_away: 1, has_odds: true },
-      { id: 9, home_team: '莱斯特城', away_team: '南安普顿', home_logo_id: null, away_logo_id: '340', league_name_cn: '英超', league_name: 'England - Premier League', match_date: '2026-05-22T22:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: false },
-      { id: 10, home_team: '蒙扎', away_team: '威尼斯', home_logo_id: null, away_logo_id: null, league_name_cn: '意甲', league_name: 'Italy - Serie A', match_date: '2026-05-22T22:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: false },
     ]
   }
 
@@ -213,9 +238,14 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ===== Admin Actions =====
-  async function fetchAdminUsers() {
-    const res = await api.get('/api/admin/users')
+
+  // --- 用户管理 ---
+  async function fetchAdminUsers(q = '') {
+    const params = {}
+    if (q) params.q = q
+    const res = await api.get('/api/admin/users', { params })
     adminUsers.value = res.data.users || []
+    return res.data
   }
 
   async function createUser(username, password) {
@@ -229,12 +259,49 @@ export const useAppStore = defineStore('app', () => {
     await fetchAdminUsers()
   }
 
+  async function banUser(userId, ban = true) {
+    const res = await api.post(`/api/admin/users/${userId}/ban`, { action: ban ? 'ban' : 'unban' })
+    await fetchAdminUsers()
+    return res.data
+  }
+
+  // --- 金币操作 ---
   async function modifyCoins(userId, amount) {
     const res = await api.post(`/api/admin/users/${userId}/coins`, { amount })
     await fetchAdminUsers()
     return res.data
   }
 
+  // --- 管理员管理 ---
+  async function fetchAdminAccounts() {
+    const res = await api.get('/api/admin/admins')
+    adminAccounts.value = res.data.admins || []
+  }
+
+  async function createAdmin(username, password, role = 'agent') {
+    const res = await api.post('/api/admin/admins', { username, password, role })
+    await fetchAdminAccounts()
+    return res.data
+  }
+
+  async function deleteAdmin(adminId) {
+    await api.delete(`/api/admin/admins/${adminId}`)
+    await fetchAdminAccounts()
+  }
+
+  async function banAdmin(adminId, ban = true) {
+    const res = await api.post(`/api/admin/admins/${adminId}/ban`, { action: ban ? 'ban' : 'unban' })
+    await fetchAdminAccounts()
+    return res.data
+  }
+
+  async function rechargeAgent(agentId, amount) {
+    const res = await api.post(`/api/admin/agents/${agentId}/coins`, { amount })
+    await fetchAdminAccounts()
+    return res.data
+  }
+
+  // --- 结算 ---
   async function fetchPendingSettlements() {
     const res = await api.get('/api/admin/settlements', { params: { status: 'pending' } })
     pendingSettlements.value = res.data.pending || []
@@ -252,22 +319,7 @@ export const useAppStore = defineStore('app', () => {
     return res.data
   }
 
-  async function fetchAdminAccounts() {
-    const res = await api.get('/api/admin/admins')
-    adminAccounts.value = res.data.admins || []
-  }
-
-  async function createAdmin(username, password) {
-    const res = await api.post('/api/admin/admins', { username, password })
-    await fetchAdminAccounts()
-    return res.data
-  }
-
-  async function deleteAdmin(adminId) {
-    await api.delete(`/api/admin/admins/${adminId}`)
-    await fetchAdminAccounts()
-  }
-
+  // --- 日志 ---
   async function fetchLogs(page = 1) {
     const res = await api.get('/api/admin/logs', { params: { page, per_page: 30 } })
     operationLogs.value = res.data.logs || []
@@ -280,17 +332,18 @@ export const useAppStore = defineStore('app', () => {
   }
 
   return {
-    isLoggedIn, isAdminLoggedIn, isSuperAdmin, user, token,
+    isLoggedIn, isAdminLoggedIn, isSuperAdmin, isAdmin, isAgent, user, token,
     matches, matchDetail, oddsCache, myBets, transactions, loading,
     adminUsers, adminAccounts, pendingSettlements, operationLogs,
+    adminRole, canCreateAdmin, canCreateAgent, canViewAllUsers, canViewAllLogs, canSettle,
     getMatchStatusText, getBetStatusText, getMarketName, getSelectionLabel,
-    formatMatchTime, formatDate,
+    formatMatchTime, formatDate, fullDateTime,
     loginUser, loginAdmin, restoreSession, logout, changePassword,
     fetchMatches, fetchMatchDetail, getMatchById, getOdds, placeBet,
     fetchMyBets, fetchTransactions, fetchProfile,
-    fetchAdminUsers, createUser, deleteUser, modifyCoins,
+    fetchAdminUsers, createUser, deleteUser, banUser, modifyCoins,
+    fetchAdminAccounts, createAdmin, deleteAdmin, banAdmin, rechargeAgent,
     fetchPendingSettlements, confirmSettlement, cancelMatch,
-    fetchAdminAccounts, createAdmin, deleteAdmin,
     fetchLogs, fetchStats,
     getMockMatches,
   }

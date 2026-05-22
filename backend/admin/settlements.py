@@ -1,20 +1,31 @@
-# bet365cn — 结算管理 API
+# bet365cn — 结算管理 API（仅超管） + 取消比赛（超管+管理）
 from flask import Blueprint, request, jsonify
-from models import db, Match, Bet, CoinTransaction, Settlement, OperationLog
-from auth import super_admin_required
+from models import db, Match, Bet, CoinTransaction, Settlement, OperationLog, UserAccount
+from auth import super_admin_required, admin_or_above, get_client_ip
 from datetime import datetime
 from services.settlement import calculate_settlement
 
 settlements_bp = Blueprint('admin_settlements', __name__)
 
 
+def _log_action(action, target_type, target_id, detail):
+    log = OperationLog(
+        admin_id=request.current_user_id,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        detail=detail,
+        ip_address=get_client_ip(),
+    )
+    db.session.add(log)
+
+
 @settlements_bp.route('/api/admin/settlements', methods=['GET'])
-@super_admin_required
+@admin_or_above
 def list_settlements():
     """待结算 + 已结算列表"""
-    status = request.args.get('status', 'pending')  # pending / confirmed
+    status = request.args.get('status', 'pending')
 
-    # 查出 settled 状态的比赛但未结算的
     if status == 'pending':
         matches = Match.query.filter(
             Match.status == 'settled',
@@ -25,7 +36,8 @@ def list_settlements():
             )
         ).all()
     else:
-        settlements = Settlement.query.filter_by(status='confirmed')             .order_by(Settlement.confirmed_at.desc()).limit(20).all()
+        settlements = Settlement.query.filter_by(status='confirmed') \
+            .order_by(Settlement.confirmed_at.desc()).limit(20).all()
         return jsonify({'settlements': [{
             'id': s.id, 'match_id': s.match_id,
             'total_bets': s.total_bets, 'total_users': s.total_users,
@@ -33,7 +45,6 @@ def list_settlements():
             'confirmed_at': s.confirmed_at.isoformat() if s.confirmed_at else None,
         } for s in settlements]})
 
-    # 为每个 settled 比赛创建待结算记录，计算明细
     result = []
     for m in matches:
         detail = calculate_settlement(m.id)
@@ -49,7 +60,7 @@ def list_settlements():
                 'total_users': detail['total_users'],
                 'total_payout': detail['total_payout'],
                 'total_win_users': detail['total_win_users'],
-                'bets_detail': detail['bets_detail'][:20],  # 最多20条
+                'bets_detail': detail['bets_detail'][:20],
             })
 
     return jsonify({'pending': result})
@@ -58,7 +69,7 @@ def list_settlements():
 @settlements_bp.route('/api/admin/settlements/confirm', methods=['POST'])
 @super_admin_required
 def confirm_settlement():
-    """确认结算"""
+    """确认结算（仅超管）"""
     data = request.get_json() or {}
     match_id = data.get('match_id')
 
@@ -69,18 +80,13 @@ def confirm_settlement():
     if not match or match.status != 'settled':
         return jsonify({'error': '比赛未结束'}), 400
 
-    # 检查是否已结算
-    existing = Settlement.query.filter_by(
-        match_id=match_id, status='confirmed'
-    ).first()
+    existing = Settlement.query.filter_by(match_id=match_id, status='confirmed').first()
     if existing:
         return jsonify({'error': '该比赛已结算'}), 400
 
-    # 计算
     detail = calculate_settlement(match_id)
 
     try:
-        # 更新下注状态 + 给赢家发金币
         for bd in detail['bets_detail']:
             bet = Bet.query.with_for_update().get(bd['bet_id'])
             if not bet:
@@ -88,33 +94,36 @@ def confirm_settlement():
             bet.status = bd['result']
             bet.settled_at = datetime.utcnow()
 
+            user = UserAccount.query.with_for_update().get(bet.user_id)
+            if not user:
+                continue
+
+            balance_before = user.coin_balance
+
             if bd['result'] == 'won':
                 bet.win_amount = bd['win_amount']
-                # 发金币
-                user_q = __import__('models').UserAccount.query.with_for_update().get(bet.user_id)
-                if user_q:
-                    user_q.coin_balance += bd['win_amount']
-                    db.session.add(CoinTransaction(
-                        user_id=bet.user_id,
-                        amount=bd['win_amount'],
-                        type='bet_win',
-                        bet_id=bet.id,
-                        note=f"中奖: {match.home_team} vs {match.away_team}",
-                    ))
+                user.coin_balance += bd['win_amount']
+                db.session.add(CoinTransaction(
+                    user_id=bet.user_id,
+                    amount=bd['win_amount'],
+                    balance_before=balance_before,
+                    balance_after=user.coin_balance,
+                    type='bet_win',
+                    bet_id=bet.id,
+                    note=f"中奖: {match.home_team} vs {match.away_team}",
+                ))
             elif bd['result'] == 'push':
-                # 走水：退回本金
-                user_q = __import__('models').UserAccount.query.with_for_update().get(bet.user_id)
-                if user_q:
-                    user_q.coin_balance += bet.bet_amount
-                    db.session.add(CoinTransaction(
-                        user_id=bet.user_id,
-                        amount=bet.bet_amount,
-                        type='bet_refund',
-                        bet_id=bet.id,
-                        note=f"退款(走水): {match.home_team} vs {match.away_team}",
-                    ))
+                user.coin_balance += bet.bet_amount
+                db.session.add(CoinTransaction(
+                    user_id=bet.user_id,
+                    amount=bet.bet_amount,
+                    balance_before=balance_before,
+                    balance_after=user.coin_balance,
+                    type='bet_refund',
+                    bet_id=bet.id,
+                    note=f"退款(走水): {match.home_team} vs {match.away_team}",
+                ))
 
-        # 创建结算记录
         sett = Settlement(
             match_id=match_id,
             status='confirmed',
@@ -127,14 +136,12 @@ def confirm_settlement():
         )
         db.session.add(sett)
 
-        log = OperationLog(
-            admin_id=request.current_user_id,
+        _log_action(
             action='结算确认',
             target_type='match',
             target_id=match_id,
             detail={'total_bets': detail['total_bets'], 'total_payout': detail['total_payout']},
         )
-        db.session.add(log)
         db.session.commit()
 
         return jsonify({'success': True, 'total_payout': detail['total_payout']})
@@ -145,9 +152,9 @@ def confirm_settlement():
 
 
 @settlements_bp.route('/api/admin/matches/<int:match_id>/cancel', methods=['POST'])
-@super_admin_required
+@admin_or_above
 def cancel_match(match_id):
-    """取消比赛，退回所有下注"""
+    """取消比赛，退回所有下注（超管+管理）"""
     match = Match.query.get(match_id)
     if not match:
         return jsonify({'error': '比赛不存在'}), 404
@@ -160,12 +167,15 @@ def cancel_match(match_id):
             bet.status = 'refunded'
             bet.settled_at = datetime.utcnow()
 
-            user = __import__('models').UserAccount.query.with_for_update().get(bet.user_id)
+            user = UserAccount.query.with_for_update().get(bet.user_id)
             if user:
+                balance_before = user.coin_balance
                 user.coin_balance += bet.bet_amount
                 db.session.add(CoinTransaction(
                     user_id=bet.user_id,
                     amount=bet.bet_amount,
+                    balance_before=balance_before,
+                    balance_after=user.coin_balance,
                     type='bet_refund',
                     bet_id=bet.id,
                     note=f"比赛取消退款: {match.home_team} vs {match.away_team}",
@@ -182,14 +192,12 @@ def cancel_match(match_id):
         )
         db.session.add(sett)
 
-        log = OperationLog(
-            admin_id=request.current_user_id,
+        _log_action(
             action='取消比赛',
             target_type='match',
             target_id=match_id,
             detail={'refunded_amount': refunded, 'affected_bets': len(bets)},
         )
-        db.session.add(log)
         db.session.commit()
 
         return jsonify({'success': True, 'refunded_amount': refunded, 'affected_bets': len(bets)})

@@ -1,40 +1,49 @@
-# bet365cn — 操作日志 + 统计 API（仅超管）
+# bet365cn — 操作日志 + 统计 API
 from flask import Blueprint, request, jsonify
-from models import db, OperationLog, CoinTransaction
-from auth import super_admin_required
+from models import db, OperationLog, CoinTransaction, AdminAccount
+from auth import agent_or_above, super_admin_required, get_client_ip, ROLE_AGENT
 from datetime import datetime
-from sqlalchemy import func
 
 logs_bp = Blueprint('admin_logs', __name__)
 
 
 @logs_bp.route('/api/admin/logs', methods=['GET'])
-@super_admin_required
+@agent_or_above
 def list_logs():
-    """操作日志列表"""
+    """操作日志列表（按权限过滤）
+    super_admin / admin → 全部
+    agent → 只看自己操作的日志
+    """
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 30, type=int)
+    admin = request.current_admin
 
     query = OperationLog.query.order_by(OperationLog.created_at.desc())
+
+    # 代理只能看自己的操作
+    if admin.role == ROLE_AGENT:
+        query = query.filter_by(admin_id=admin.id)
+
     total = query.count()
     logs = query.offset((page - 1) * per_page).limit(per_page).all()
 
-    from models import AdminAccount
+    # 预加载操作人名称
+    admin_ids = set(l.admin_id for l in logs)
     admin_map = {}
-    
+    for aid in admin_ids:
+        a = AdminAccount.query.get(aid)
+        admin_map[aid] = a.username if a else '?'
+
     result = []
     for l in logs:
-        if l.admin_id not in admin_map:
-            a = AdminAccount.query.get(l.admin_id)
-            admin_map[l.admin_id] = a.username if a else '?'
-        
         result.append({
             'id': l.id,
-            'admin_name': admin_map[l.admin_id],
+            'admin_name': admin_map.get(l.admin_id, '?'),
             'action': l.action,
             'target_type': l.target_type,
             'target_id': l.target_id,
             'detail': l.detail,
+            'ip_address': l.ip_address,
             'created_at': l.created_at.isoformat() if l.created_at else None,
         })
 
@@ -42,15 +51,23 @@ def list_logs():
 
 
 @logs_bp.route('/api/admin/stats', methods=['GET'])
-@super_admin_required
+@agent_or_above
 def stats():
-    """金币统计（按日期范围）"""
+    """金币统计（按日期范围）
+    super_admin / admin → 全部操作
+    agent → 只看自己的操作
+    """
     date_from = request.args.get('date_from', '')
     date_to = request.args.get('date_to', '')
+    admin = request.current_admin
 
     query = CoinTransaction.query.filter(
         CoinTransaction.type.in_(['admin_add', 'admin_deduct'])
     )
+
+    # 代理只看自己的操作
+    if admin.role == ROLE_AGENT:
+        query = query.filter_by(operator_id=admin.id)
 
     if date_from:
         try:
@@ -73,12 +90,14 @@ def stats():
     total_deduct = sum(abs(t.amount) for t in txs if t.amount < 0)
 
     # 按操作人分组
-    from models import AdminAccount
     by_admin = {}
     for t in txs:
         if t.operator_id not in by_admin:
-            admin = AdminAccount.query.get(t.operator_id)
-            by_admin[t.operator_id] = {'admin_name': admin.username if admin else '?', 'add': 0, 'deduct': 0}
+            operator = AdminAccount.query.get(t.operator_id)
+            by_admin[t.operator_id] = {
+                'admin_name': operator.username if operator else '?',
+                'add': 0, 'deduct': 0,
+            }
         if t.amount > 0:
             by_admin[t.operator_id]['add'] += t.amount
         else:

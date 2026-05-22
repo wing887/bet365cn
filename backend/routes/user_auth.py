@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify
 from models import db, UserAccount
 from auth import hash_password, check_password, create_token, login_required
+from datetime import datetime
 
 user_auth_bp = Blueprint('user_auth', __name__)
 
@@ -27,6 +28,11 @@ def login():
         return jsonify({'error': '密码错误'}), 401
 
     token = create_token(user.id, 'user', is_admin=False)
+
+    # 更新最后登录时间
+    user.last_login_at = datetime.utcnow()
+    db.session.commit()
+
     return jsonify({
         'token': token,
         'user': {

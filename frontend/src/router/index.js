@@ -44,24 +44,22 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title || 'bet365cn'
 
-  // 用户端登录检查
   const hasToken = !!localStorage.getItem('token')
   const isUser = !!localStorage.getItem('user')
-  const isAdmin = !!localStorage.getItem('admin_user')
+  const isAdminUser = !!localStorage.getItem('admin_user')
 
   if (to.meta.requiresAuth && !(hasToken && isUser)) {
     return next('/login')
   }
 
-  if (to.meta.requiresAdmin && !(hasToken && isAdmin)) {
+  if (to.meta.requiresAdmin && !(hasToken && isAdminUser)) {
     return next('/admin/login')
   }
 
-  // 已登录不能访问登录页
   if (to.path === '/login' && hasToken && isUser) {
     return next('/')
   }
-  if (to.path === '/admin/login' && hasToken && isAdmin) {
+  if (to.path === '/admin/login' && hasToken && isAdminUser) {
     return next('/admin')
   }
 

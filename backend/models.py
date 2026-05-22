@@ -14,7 +14,11 @@ class AdminAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='admin')  # 'super_admin' | 'admin'
+    role = db.Column(db.String(20), nullable=False, default='agent')  # 'super_admin' | 'admin' | 'agent'
+    coin_balance = db.Column(db.Integer, default=0, nullable=False)  # 代理金币池
+    status = db.Column(db.String(20), default='active', nullable=False)  # 'active' | 'disabled'
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    last_login_ip = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('admin_accounts.id'), nullable=True)
     
@@ -33,9 +37,11 @@ class UserAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
-    nickname = db.Column(db.String(50), nullable=False)  # "用户001"
+    nickname = db.Column(db.String(50), nullable=False, index=True)  # "用户001"（支持搜索）
     coin_balance = db.Column(db.Integer, default=0, nullable=False)
     status = db.Column(db.String(20), default='active')  # 'active' | 'disabled'
+    created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin_accounts.id'), nullable=True)
+    last_login_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -125,6 +131,8 @@ class CoinTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user_accounts.id'), nullable=False, index=True)
     amount = db.Column(db.Integer, nullable=False)  # 正=加 | 负=减
+    balance_before = db.Column(db.Integer, nullable=True)  # 操作前余额
+    balance_after = db.Column(db.Integer, nullable=True)   # 操作后余额
     type = db.Column(db.String(20), nullable=False)  # admin_add/admin_deduct/bet_place/bet_win/bet_refund
     operator_id = db.Column(db.Integer, db.ForeignKey('admin_accounts.id'), nullable=True)  # 操作人（管理员）
     bet_id = db.Column(db.Integer, db.ForeignKey('bets.id'), nullable=True)  # 关联下注
@@ -166,6 +174,7 @@ class OperationLog(db.Model):
     target_type = db.Column(db.String(30))  # user/admin/match
     target_id = db.Column(db.Integer)
     detail = db.Column(db.JSON, default=dict)  # 操作详情
+    ip_address = db.Column(db.String(45), nullable=True)  # 操作IP
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
