@@ -3,6 +3,7 @@ import jwt
 import hashlib
 from datetime import datetime, timedelta
 from functools import wraps
+from typing import Optional, Tuple
 from flask import request, jsonify, current_app
 
 # 角色层级
@@ -51,7 +52,7 @@ def get_client_ip() -> str:
 # 权限辅助函数
 # ============================================================
 
-def _check_disabled(admin) -> tuple | None:
+def _check_disabled(admin) -> Optional[Tuple]:
     """检查管理员是否被封禁，返回 (error, status_code) 或 None"""
     if admin.status == 'disabled':
         return jsonify({'error': '该账号已被封禁'}), 403
