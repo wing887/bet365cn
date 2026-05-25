@@ -78,6 +78,7 @@ def modify_coins(user_id):
                 'balance_before': balance_before,
                 'balance_after': balance_after,
                 'username': user.username,
+                'description': f'为用户「{user.nickname}」{"增加" if amount > 0 else "扣除"}{abs(amount)}金币，操作前余额{balance_before}，操作后余额{balance_after}'
             },
         )
         db.session.commit()

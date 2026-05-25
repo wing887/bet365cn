@@ -80,7 +80,7 @@ def create_admin():
         action='创建管理员',
         target_type='admin',
         target_id=admin.id,
-        detail={'username': username, 'role': role},
+        detail={'username': username, 'role': role, 'description': f'创建{role}角色管理员「{username}」'},
     )
     db.session.commit()
 
@@ -109,7 +109,7 @@ def delete_admin(admin_id):
         action='删除管理员',
         target_type='admin',
         target_id=admin_id,
-        detail={'username': target.username, 'role': target.role},
+        detail={'username': target.username, 'role': target.role, 'description': f'删除{target.role}角色管理员「{target.username}」'},
     )
     db.session.delete(target)
     db.session.commit()
@@ -145,7 +145,7 @@ def toggle_ban(admin_id):
         action='封禁管理员' if action == 'ban' else '解封管理员',
         target_type='admin',
         target_id=admin_id,
-        detail={'username': target.username, 'role': target.role},
+        detail={'username': target.username, 'role': target.role, 'description': f'{"封禁" if action == "ban" else "解封"}{target.role}角色管理员「{target.username}」'},
     )
     db.session.commit()
 
@@ -185,6 +185,7 @@ def recharge_agent(agent_id):
         detail={
             'username': agent.username, 'amount': amount,
             'balance_before': balance_before, 'balance_after': agent.coin_balance,
+            'description': f'为代理「{agent.username}」{"充值" if amount > 0 else "扣减"}{abs(amount)}金币，操作前余额{balance_before}，操作后余额{agent.coin_balance}'
         },
     )
     db.session.commit()

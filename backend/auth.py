@@ -245,3 +245,8 @@ def admin_or_above(f):
 def super_admin_required(f):
     """超管验证"""
     return _admin_auth(f, [ROLE_SUPER_ADMIN])
+
+
+def agent_only(f):
+    """代理验证（仅代理可访问，超管/管理不可）"""
+    return _admin_auth(f, [ROLE_AGENT])

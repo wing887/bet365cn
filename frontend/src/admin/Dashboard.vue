@@ -40,6 +40,8 @@
       <router-link to="/admin/users" class="admin-nav-item">👥 用户管理</router-link>
       <router-link to="/admin/coins" class="admin-nav-item">💰 金币操作</router-link>
       <router-link v-if="store.canSettle" to="/admin/settlements" class="admin-nav-item">🏁 结算管理</router-link>
+      <router-link v-if="!store.isAgent" to="/admin/agents" class="admin-nav-item">📈 代理管理</router-link>
+      <router-link v-if="store.isAgent" to="/admin/customers" class="admin-nav-item">📊 客户统计</router-link>
       <router-link v-if="store.canCreateAgent" to="/admin/admins" class="admin-nav-item">🔑 管理员</router-link>
       <router-link to="/admin/logs" class="admin-nav-item">📋 操作日志</router-link>
       <router-link to="/admin/stats" class="admin-nav-item">📊 金币统计</router-link>

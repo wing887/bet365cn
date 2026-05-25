@@ -13,8 +13,10 @@ import UserManage from '../admin/UserManage.vue'
 import CoinManage from '../admin/CoinManage.vue'
 import Settlement from '../admin/Settlement.vue'
 import AdminManage from '../admin/AdminManage.vue'
+import AgentManage from '../admin/AgentManage.vue'
 import Logs from '../admin/Logs.vue'
 import Stats from '../admin/Stats.vue'
+import CustomerStats from '../admin/CustomerStats.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home, meta: { title: 'bet365cn', requiresAuth: true } },
@@ -29,8 +31,10 @@ const routes = [
   { path: '/admin/coins', name: 'adminCoins', component: CoinManage, meta: { title: '金币操作', requiresAdmin: true } },
   { path: '/admin/settlements', name: 'adminSettlements', component: Settlement, meta: { title: '结算管理', requiresAdmin: true } },
   { path: '/admin/admins', name: 'adminAdmins', component: AdminManage, meta: { title: '管理员管理', requiresAdmin: true } },
+  { path: '/admin/agents', name: 'adminAgents', component: AgentManage, meta: { title: '代理管理', requiresAdmin: true } },
   { path: '/admin/logs', name: 'adminLogs', component: Logs, meta: { title: '操作日志', requiresAdmin: true } },
   { path: '/admin/stats', name: 'adminStats', component: Stats, meta: { title: '金币统计', requiresAdmin: true } },
+  { path: '/admin/customers', name: 'agentCustomers', component: CustomerStats, meta: { title: '客户统计', requiresAdmin: true } },
 ]
 
 const router = createRouter({

@@ -61,6 +61,8 @@ def create_app(config=None):
         from admin.settlements import settlements_bp
         from admin.admins import admins_bp
         from admin.logs import logs_bp
+        from admin.agents import agents_bp
+        from admin.customer_stats import customer_stats_bp
 
         app.register_blueprint(admin_auth_bp)
         app.register_blueprint(users_bp)
@@ -68,6 +70,8 @@ def create_app(config=None):
         app.register_blueprint(settlements_bp)
         app.register_blueprint(admins_bp)
         app.register_blueprint(logs_bp)
+        app.register_blueprint(agents_bp)
+        app.register_blueprint(customer_stats_bp)
 
         # ===== 手动触发同步（后台执行，避免超时）=====
         import threading

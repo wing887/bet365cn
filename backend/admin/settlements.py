@@ -4,6 +4,7 @@ from models import db, Match, Bet, CoinTransaction, Settlement, OperationLog, Us
 from auth import super_admin_required, admin_or_above, get_client_ip
 from datetime import datetime
 from services.settlement import calculate_settlement
+from services.team_names import team_name_service
 
 settlements_bp = Blueprint('admin_settlements', __name__)
 
@@ -47,12 +48,14 @@ def list_settlements():
 
     result = []
     for m in matches:
+        home_cn = team_name_service.translate(m.league_name, m.home_team)
+        away_cn = team_name_service.translate(m.league_name, m.away_team)
         detail = calculate_settlement(m.id)
         if detail['total_bets'] > 0:
             result.append({
                 'match_id': m.id,
-                'home_team': m.home_team,
-                'away_team': m.away_team,
+                'home_team': home_cn,
+                'away_team': away_cn,
                 'league_name': m.league_name,
                 'scores_home': m.scores_home,
                 'scores_away': m.scores_away,
@@ -136,11 +139,17 @@ def confirm_settlement():
         )
         db.session.add(sett)
 
+        home_cn = team_name_service.translate(match.league_name, match.home_team)
+        away_cn = team_name_service.translate(match.league_name, match.away_team)
         _log_action(
             action='结算确认',
             target_type='match',
             target_id=match_id,
-            detail={'total_bets': detail['total_bets'], 'total_payout': detail['total_payout']},
+            detail={
+                'total_bets': detail['total_bets'],
+                'total_payout': detail['total_payout'],
+                'description': f'结算 {home_cn} vs {away_cn} 的比赛，比分 {match.scores_home}:{match.scores_away}，总注{detail["total_bets"]}笔，赔付{detail["total_payout"]}金币'
+            },
         )
         db.session.commit()
 
@@ -196,7 +205,11 @@ def cancel_match(match_id):
             action='取消比赛',
             target_type='match',
             target_id=match_id,
-            detail={'refunded_amount': refunded, 'affected_bets': len(bets)},
+            detail={
+                'refunded_amount': refunded,
+                'affected_bets': len(bets),
+                'description': f'取消 {team_name_service.translate(match.league_name, match.home_team)} vs {team_name_service.translate(match.league_name, match.away_team)} 的比赛，退回{len(bets)}笔下注共{refunded}金币'
+            },
         )
         db.session.commit()
 

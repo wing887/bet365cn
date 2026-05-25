@@ -93,7 +93,7 @@ def create_user():
         action='创建用户',
         target_type='user',
         target_id=user.id,
-        detail={'username': username, 'nickname': nickname},
+        detail={'username': username, 'nickname': nickname, 'description': f'创建用户「{nickname}」(账号: {username})'},
     )
     db.session.commit()
 
@@ -115,7 +115,7 @@ def delete_user(user_id):
         action='删除用户',
         target_type='user',
         target_id=user_id,
-        detail={'username': user.username, 'nickname': user.nickname},
+        detail={'username': user.username, 'nickname': user.nickname, 'description': f'删除用户「{user.nickname}」(账号: {user.username})'},
     )
 
     # 级联清理关联数据
@@ -152,7 +152,7 @@ def toggle_ban(user_id):
         action='封禁用户' if action == 'ban' else '解封用户',
         target_type='user',
         target_id=user_id,
-        detail={'username': user.username, 'nickname': user.nickname},
+        detail={'username': user.username, 'nickname': user.nickname, 'description': f'{"封禁" if action == "ban" else "解封"}用户「{user.nickname}」(账号: {user.username})'},
     )
     db.session.commit()
 
