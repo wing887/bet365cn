@@ -39,7 +39,7 @@
         <div class="match-card-body">
           <div class="match-teams-row">
             <div class="match-team-col">
-              <img v-if="m.home_logo_id" :src="`/team-logos/${m.home_logo_id}.png`" class="team-logo" />
+              <img v-if="m.home_logo_id" :src="`${logoBase}/${m.home_logo_id}.png`" class="team-logo" />
               <div v-else class="team-logo-fallback">{{ m.home_team.charAt(0) }}</div>
               <div class="match-team-name">{{ m.home_team }}</div>
             </div>
@@ -49,7 +49,7 @@
               <div v-if="m.status==='live'" style="font-size:10px;color:var(--red);">进行中</div>
             </div>
             <div class="match-team-col">
-              <img v-if="m.away_logo_id" :src="`/team-logos/${m.away_logo_id}.png`" class="team-logo" />
+              <img v-if="m.away_logo_id" :src="`${logoBase}/${m.away_logo_id}.png`" class="team-logo" />
               <div v-else class="team-logo-fallback">{{ m.away_team.charAt(0) }}</div>
               <div class="match-team-name">{{ m.away_team }}</div>
             </div>
@@ -65,10 +65,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAppStore } from '../stores/app'
 
 const store = useAppStore()
+
+// Logo URL: Vercel 上没有静态文件，走服务器
+const logoBase = computed(() => {
+  return window.location.hostname === 'bet365cn.top'
+    ? 'http://125.65.79.20:888/team-logos'
+    : '/team-logos'
+})
 
 const leagues = [
   { slug: 'england-premier-league', label: '英超', disabled: false },
