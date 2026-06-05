@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+// 生产环境（Vercel 托管）使用服务器 API；本地开发使用相对路径
+const API_BASE = window.location.hostname === 'bet365cn.top' 
+  ? 'http://125.65.79.20:888'
+  : ''
+
 const api = axios.create({
-  baseURL: '',  // 使用相对路径，Nginx 统一代理，手机也能访问
+  baseURL: API_BASE,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
