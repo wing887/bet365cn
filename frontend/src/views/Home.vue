@@ -6,7 +6,7 @@
         v-for="lg in leagues"
         :key="lg.slug"
         class="league-btn"
-        :class="{ active: selectedLeagues.includes(lg.slug), disabled: lg.disabled }"
+        :class="{ active: selectedLeagues.includes(lg.slug), disabled: lg.disabled, highlight: lg.highlight }"
         :disabled="lg.disabled"
         @click="toggleLeague(lg.slug)"
       >{{ lg.label }}</button>
@@ -76,6 +76,7 @@ const leagues = [
   { slug: 'germany-bundesliga', label: '德甲', disabled: false },
   { slug: 'italy-serie-a', label: '意甲', disabled: false },
   { slug: 'france-ligue-1', label: '法甲', disabled: false },
+  { slug: 'international-clubs-uefa-champions-league', label: '🏆 欧冠决赛', disabled: false, highlight: true },
   { slug: 'international-world-cup', label: '世界杯', disabled: true },
 ]
 

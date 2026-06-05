@@ -17,6 +17,8 @@ import AgentManage from '../admin/AgentManage.vue'
 import Logs from '../admin/Logs.vue'
 import Stats from '../admin/Stats.vue'
 import CustomerStats from '../admin/CustomerStats.vue'
+import BetLimitConfig from '../admin/BetLimitConfig.vue'
+import MarketStatus from '../admin/MarketStatus.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home, meta: { title: 'bet365cn', requiresAuth: true } },
@@ -35,6 +37,8 @@ const routes = [
   { path: '/admin/logs', name: 'adminLogs', component: Logs, meta: { title: '操作日志', requiresAdmin: true } },
   { path: '/admin/stats', name: 'adminStats', component: Stats, meta: { title: '金币统计', requiresAdmin: true } },
   { path: '/admin/customers', name: 'agentCustomers', component: CustomerStats, meta: { title: '客户统计', requiresAdmin: true } },
+  { path: '/admin/bet-limits', name: 'adminBetLimits', component: BetLimitConfig, meta: { title: '投注限额', requiresAdmin: true } },
+  { path: '/admin/market-status', name: 'adminMarketStatus', component: MarketStatus, meta: { title: '封盘管理', requiresAdmin: true } },
 ]
 
 const router = createRouter({

@@ -90,6 +90,7 @@ class Odds(db.Model):
     market_type = db.Column(db.String(20), nullable=False)  # 'ML' | 'Spread' | 'Totals' | 'CS'
     # JSON: ML → {home, draw, away} | Spread → {hdp, home, away} | Totals → {hdp, over, under} | CS → [{label, odds}...]
     odds_data = db.Column(db.JSON, nullable=False)
+    status = db.Column(db.String(20), default='active', nullable=False, index=True)  # 'active' | 'suspended' | 'closed'
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     __table_args__ = (
@@ -176,6 +177,19 @@ class OperationLog(db.Model):
     detail = db.Column(db.JSON, default=dict)  # 操作详情
     ip_address = db.Column(db.String(45), nullable=True)  # 操作IP
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ============================================================
+# 投注限额配置表（超管设置各盘口最大投注额）
+# ============================================================
+class BetLimit(db.Model):
+    __tablename__ = 'bet_limits'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    market_type = db.Column(db.String(20), unique=True, nullable=False)  # ML/Spread/Totals/CS
+    max_bet_amount = db.Column(db.Integer, nullable=False, default=5000)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('admin_accounts.id'), nullable=True)
 
 
 # ============================================================

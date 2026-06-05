@@ -13,7 +13,7 @@ from services.odds_fetcher import OddsApiCollector
 
 logger = logging.getLogger(__name__)
 
-# 五大联赛 + 世界杯
+# 五大联赛 + 世界杯 + 欧冠
 LEAGUES = [
     ('英超', 'england-premier-league'),
     ('德甲', 'germany-bundesliga'),
@@ -21,6 +21,7 @@ LEAGUES = [
     ('意甲', 'italy-serie-a'),
     ('法甲', 'france-ligue-1'),
     ('世界杯', 'international-world-cup'),
+    ('欧冠', 'international-clubs-uefa-champions-league'),
 ]
 
 BOOKMAKERS = ['Bet365']
@@ -145,6 +146,9 @@ def sync_odds():
 
             for bm_name, markets in odds_data.items():
                 for market_type, odds_json in markets.items():
+                    # 提取封盘状态
+                    market_status = odds_json.pop('status', 'active') if isinstance(odds_json, dict) else 'active'
+                    
                     existing = Odds.query.filter_by(
                         match_id=match.id,
                         bookmaker=bm_name,
@@ -153,6 +157,7 @@ def sync_odds():
 
                     if existing:
                         existing.odds_data = odds_json
+                        existing.status = market_status
                         existing.updated_at = datetime.utcnow()
                     else:
                         new_odds = Odds(
@@ -160,6 +165,7 @@ def sync_odds():
                             bookmaker=bm_name,
                             market_type=market_type,
                             odds_data=odds_json,
+                            status=market_status,
                         )
                         db.session.add(new_odds)
                     updated += 1

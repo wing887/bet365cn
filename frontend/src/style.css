@@ -185,6 +185,13 @@ body {
   cursor: not-allowed;
 }
 .league-btn.disabled:active { transform: none; }
+.league-btn.highlight {
+  border-color: #F5A623;
+  color: #C78500;
+  background: linear-gradient(135deg, #FFF8E1, #FFECB3);
+  font-weight: 700;
+  position: relative;
+}
 
 /* ==================== STATUS TABS ==================== */
 .status-tabs {

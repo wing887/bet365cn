@@ -1,6 +1,6 @@
 # bet365cn — 下注 API
 from flask import Blueprint, request, jsonify
-from models import db, Match, Odds, Bet, CoinTransaction
+from models import db, Match, Odds, Bet, CoinTransaction, BetLimit
 from auth import login_required
 from datetime import datetime
 
@@ -31,6 +31,13 @@ def place_bet():
     if bet_amount < 50:
         return jsonify({'error': '最低下注50金币'}), 400
 
+    # 检查最大投注限额
+    limit = BetLimit.query.filter_by(market_type=market_type).first()
+    if limit and bet_amount > limit.max_bet_amount:
+        return jsonify({
+            'error': f'{market_type}最大投注{limit.max_bet_amount}金币'
+        }), 400
+
     # 查比赛
     match = Match.query.get(match_id)
     if not match:
@@ -46,6 +53,19 @@ def place_bet():
 
     if not odds:
         return jsonify({'error': '该玩法暂无赔率'}), 400
+
+    # 检查盘口是否被封
+    if odds.status == 'suspended':
+        return jsonify({'error': '该盘口暂时封盘，请稍后再试'}), 400
+    if odds.status == 'closed':
+        return jsonify({'error': '该盘口已关闭'}), 400
+
+    # 检查赔率是否过期（超过10分钟未更新）
+    from datetime import timedelta
+    if odds.updated_at:
+        age = datetime.utcnow() - odds.updated_at
+        if age > timedelta(minutes=10):
+            return jsonify({'error': '赔率已过期，请刷新后重试'}), 400
 
     # 计算实际赔率
     odds_value = _get_odds_value(market_type, selection, odds.odds_data)
@@ -145,6 +165,17 @@ def list_bets():
         })
 
     return jsonify({'bets': result})
+
+
+@bets_bp.route('/api/bets/limits', methods=['GET'])
+@login_required
+def get_bet_limits_public():
+    """读取各盘口最大投注额（普通用户可见）"""
+    limits = BetLimit.query.all()
+    result = {}
+    for l in limits:
+        result[l.market_type.lower()] = l.max_bet_amount
+    return jsonify({'limits': result})
 
 
 def _get_odds_value(market_type, selection, odds_data):

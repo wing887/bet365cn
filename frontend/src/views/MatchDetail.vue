@@ -9,7 +9,7 @@
       </div>
       <div v-if="match.status==='pending' && odds" class="card">
         <div style="padding:12px;">
-          <div class="market-tabs"><button v-for="mt in marketTypes" :key="mt.key" class="market-tab" :class="{active:activeMarket===mt.key}" @click="activeMarket=mt.key;selectedOption=''">{{ mt.label }}</button></div>
+          <div class="market-tabs"><button v-for="mt in marketTypes" :key="mt.key" class="market-tab" :class="{active:activeMarket===mt.key}" @click="activeMarket=mt.key;sel=''">{{ mt.label }}</button></div>
           <div v-if="activeMarket==='ML'" class="bet-grid bet-grid-3">
             <div class="bet-option" :class="{selected:sel==='home'}" @click="sel='home'"><span class="bet-option-label">主胜</span><span class="bet-option-odds">{{ odds.ML?.data?.home }}</span></div>
             <div class="bet-option" :class="{selected:sel==='draw'}" @click="sel='draw'"><span class="bet-option-label">平局</span><span class="bet-option-odds">{{ odds.ML?.data?.draw }}</span></div>
@@ -27,7 +27,13 @@
             <div v-for="s in (odds.CS?.data?.scores||[])" :key="s.label" class="bet-option" :class="{selected:sel===s.label}" @click="sel=s.label"><span class="bet-option-label">{{ s.label }}</span><span class="bet-option-odds">@{{ s.odds }}</span></div>
           </div>
           <div v-if="sel" style="margin-top:10px;">
-            <div class="bet-input-row"><input v-model.number="betAmount" type="number" class="input" placeholder="金币数（最低50）" /><button class="btn btn-accent btn-wide" :disabled="betting" @click="doBet">{{ betting?'下注中...':'确认下注' }}</button></div>
+            <div class="bet-limit-hint" style="text-align:center;font-size:12px;color:#999;margin-bottom:6px;">
+              限额 {{ minBet }} ~ {{ maxBet }} 金币
+            </div>
+            <div class="bet-input-row">
+              <input v-model.number="betAmount" type="number" class="input" :min="minBet" :max="maxBet" :placeholder="'金币（'+minBet+'-'+maxBet+'）'" />
+              <button class="btn btn-accent btn-wide" :disabled="betting" @click="doBet">{{ betting?'下注中...':'确认下注' }}</button>
+            </div>
             <div v-if="betAmount>=50&&currOdds>0" class="bet-summary" style="margin-top:10px;"><div class="bet-summary-text">预估奖励</div><div class="bet-summary-amount">{{ Math.round(betAmount*currOdds) }} 金币</div><div class="bet-summary-odds">赔率 @{{ currOdds }}</div></div>
             <div v-if="betError" style="color:var(--red);font-size:12px;text-align:center;margin-top:6px;">{{ betError }}</div>
           </div>
@@ -39,15 +45,72 @@
     </template>
   </div>
 </template>
+
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'; import { useRoute } from 'vue-router'; import { useAppStore } from '../stores/app'
-const store = useAppStore(); const route = useRoute(); const showToast = inject('showToast')
-const activeMarket = ref('ML'); const sel = ref(''); const betAmount = ref(100); const betting = ref(false); const betError = ref('')
+import { ref, computed, inject, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useAppStore } from '../stores/app'
+import api from '../api/client'
+
+const store = useAppStore()
+const route = useRoute()
+const showToast = inject('showToast')
+
+const activeMarket = ref('ML')
+const sel = ref('')
+const betAmount = ref(100)
+const betting = ref(false)
+const betError = ref('')
+const betLimits = ref({ ml: 5000, spread: 5000, totals: 5000, cs: 1000 })
+
 const marketTypes = [{key:'ML',label:'胜平负'},{key:'Spread',label:'让球盘'},{key:'Totals',label:'大小球'},{key:'CS',label:'波胆'}]
+
 const match = computed(() => store.getMatchById(route.params.id))
 const odds = computed(() => store.getOdds(route.params.id))
-const spreadHdp = computed(()=>{if(!odds.value?.Spread?.data)return'';const h=odds.value.Spread.data.hdp;return h>0?`主队让${h}球`:h<0?`主队受让${-h}球`:'平手盘'})
-const currOdds = computed(()=>{if(!odds.value||!sel.value)return 0;const o=odds.value;const mk=activeMarket.value;if(mk==='ML')return o.ML?.data?.[sel.value]||0;if(mk==='Spread')return o.Spread?.data?.[sel.value]||0;if(mk==='Totals')return o.Totals?.data?.[sel.value]||0;if(mk==='CS'){const s=(o.CS?.data?.scores||[]).find(x=>x.label===sel.value);return s?.odds||0}return 0})
-async function doBet(){if(!sel.value)return;betting.value=true;betError.value='';try{const r=await store.placeBet(match.value.id,activeMarket.value,sel.value,betAmount.value);if(r.success){showToast(`下注成功！预估 ${r.bet.potential_win} 金币`);sel.value='';betAmount.value=100}}catch(e){betError.value=e.response?.data?.error||'下注失败'}finally{betting.value=false}}
-onMounted(async()=>{await store.fetchMatchDetail(route.params.id)})
+const spreadHdp = computed(() => {
+  if(!odds.value?.Spread?.data) return ''
+  const h = odds.value.Spread.data.hdp
+  return h>0 ? `主队让${h}球` : h<0 ? `主队受让${-h}球` : '平手盘'
+})
+const currOdds = computed(() => {
+  if(!odds.value||!sel.value) return 0
+  const o = odds.value; const mk = activeMarket.value
+  if(mk==='ML') return o.ML?.data?.[sel.value]||0
+  if(mk==='Spread') return o.Spread?.data?.[sel.value]||0
+  if(mk==='Totals') return o.Totals?.data?.[sel.value]||0
+  if(mk==='CS') { const s=(o.CS?.data?.scores||[]).find(x=>x.label===sel.value); return s?.odds||0 }
+  return 0
+})
+const minBet = computed(() => 50)
+const maxBet = computed(() => {
+  const key = activeMarket.value.toLowerCase()
+  return betLimits.value[key] || 5000
+})
+
+async function doBet() {
+  if(!sel.value) return
+  betting.value = true
+  betError.value = ''
+  try {
+    const r = await store.placeBet(match.value.id, activeMarket.value, sel.value, betAmount.value)
+    if(r.success) {
+      showToast(`下注成功！预估 ${r.bet.potential_win} 金币`)
+      sel.value = ''
+      betAmount.value = 100
+    }
+  } catch(e) {
+    betError.value = e.response?.data?.error || '下注失败'
+  } finally {
+    betting.value = false
+  }
+}
+
+onMounted(async () => {
+  await store.fetchMatchDetail(route.params.id)
+  // 加载投注限额
+  try {
+    const r = await api.get('/api/bets/limits')
+    if (r.data.limits) betLimits.value = r.data.limits
+  } catch(e) { /* use defaults */ }
+})
 </script>

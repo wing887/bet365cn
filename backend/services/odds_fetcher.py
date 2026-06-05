@@ -122,7 +122,8 @@ class OddsApiCollector:
     ) -> dict:
         """
         获取单场比赛赔率
-        返回: {bookmaker: {ML: ..., Spread: ..., Totals: ..., CS: ...}}
+        返回: {bookmaker: {ML: {data:..., status:...}, Spread: ..., Totals: ..., CS: ...}}
+        status: 'active' | 'suspended' | 'closed'
         """
         if bookmakers is None:
             bookmakers = ['Bet365']
@@ -147,41 +148,75 @@ class OddsApiCollector:
             for market in markets:
                 name = market.get('name', '')
                 odds = market.get('odds', [])
+                # 检测市场状态（API 可能返回 status 字段，如 'TRADING' 或 'SUSPENDED'）
+                market_status = market.get('status', 'TRADING')
 
                 if name == 'ML' and odds:
                     o = odds[0]
+                    home_val = o.get('home', 'N/A')
+                    draw_val = o.get('draw', 'N/A')
+                    away_val = o.get('away', 'N/A')
+                    # 全部 N/A = 封盘
+                    if home_val == 'N/A' and draw_val == 'N/A' and away_val == 'N/A':
+                        market_status = 'suspended'
+                    else:
+                        market_status = 'active'
                     bm_result['ML'] = {
-                        'home': float(o.get('home', 0)) if o.get('home', 'N/A') != 'N/A' else 0,
-                        'draw': float(o.get('draw', 0)) if o.get('draw', 'N/A') != 'N/A' else 0,
-                        'away': float(o.get('away', 0)) if o.get('away', 'N/A') != 'N/A' else 0,
+                        'home': float(home_val) if home_val != 'N/A' else 0,
+                        'draw': float(draw_val) if draw_val != 'N/A' else 0,
+                        'away': float(away_val) if away_val != 'N/A' else 0,
+                        'status': market_status,
                     }
 
                 elif name == 'Spread' and odds:
                     o = odds[0]
+                    home_val = o.get('home', 'N/A')
+                    away_val = o.get('away', 'N/A')
+                    if home_val == 'N/A' and away_val == 'N/A':
+                        market_status = 'suspended'
+                    else:
+                        market_status = 'active'
                     bm_result['Spread'] = {
                         'hdp': float(o.get('hdp', 0)),
-                        'home': float(o.get('home', 0)),
-                        'away': float(o.get('away', 0)),
+                        'home': float(home_val) if home_val != 'N/A' else 0,
+                        'away': float(away_val) if away_val != 'N/A' else 0,
+                        'status': market_status,
                     }
 
                 elif name == 'Totals' and odds:
-                    o = odds[0]  # 取第一条阈值
+                    o = odds[0]
+                    over_val = o.get('over', 'N/A')
+                    under_val = o.get('under', 'N/A')
+                    if over_val == 'N/A' and under_val == 'N/A':
+                        market_status = 'suspended'
+                    else:
+                        market_status = 'active'
                     bm_result['Totals'] = {
                         'hdp': float(o.get('hdp', 0)),
-                        'over': float(o.get('over', 0)),
-                        'under': float(o.get('under', 0)),
+                        'over': float(over_val) if over_val != 'N/A' else 0,
+                        'under': float(under_val) if under_val != 'N/A' else 0,
+                        'status': market_status,
                     }
 
                 elif name == 'Correct Score' and odds:
-                    # 按赔率排序，取前10个最低赔率
                     scores = []
                     for o in odds:
                         label = o.get('label', '')
-                        odd_val = float(o.get('odds', 0))
+                        odd_val_str = o.get('odds', 'N/A')
+                        odd_val = float(odd_val_str) if odd_val_str != 'N/A' else 0
                         if label and odd_val > 0:
                             scores.append({'label': label, 'odds': odd_val})
-                    scores.sort(key=lambda x: x['odds'])
-                    bm_result['CS'] = {'scores': scores[:10]}
+                    if scores:
+                        scores.sort(key=lambda x: x['odds'])
+                        bm_result['CS'] = {
+                            'scores': scores[:10],
+                            'status': 'active',
+                        }
+                    else:
+                        bm_result['CS'] = {
+                            'scores': [],
+                            'status': 'suspended',
+                        }
 
             if bm_result:
                 result[bm_name] = bm_result

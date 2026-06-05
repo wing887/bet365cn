@@ -38,6 +38,7 @@ class Config:
         '意甲': 'italy-serie-a',
         '法甲': 'france-ligue-1',
         '世界杯': 'international-world-cup',
+        '欧冠': 'international-clubs-uefa-champions-league',
     }
     
     # 下注配置

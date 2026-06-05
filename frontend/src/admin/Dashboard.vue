@@ -45,6 +45,8 @@
       <router-link v-if="store.canCreateAgent" to="/admin/admins" class="admin-nav-item">🔑 管理员</router-link>
       <router-link to="/admin/logs" class="admin-nav-item">📋 操作日志</router-link>
       <router-link to="/admin/stats" class="admin-nav-item">📊 金币统计</router-link>
+      <router-link v-if="store.isSuperAdmin" to="/admin/bet-limits" class="admin-nav-item">🎲 投注限额</router-link>
+      <router-link v-if="store.isSuperAdmin" to="/admin/market-status" class="admin-nav-item">🚫 封盘管理</router-link>
     </div>
 
     <!-- 待结算提醒（仅超管） -->

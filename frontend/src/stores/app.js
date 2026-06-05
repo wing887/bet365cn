@@ -331,6 +331,28 @@ export const useAppStore = defineStore('app', () => {
     return res.data
   }
 
+  // --- 投注限额 ---
+  async function fetchBetLimits() {
+    const res = await api.get('/api/admin/config/bet-limits')
+    return res.data
+  }
+
+  async function updateBetLimits(payload) {
+    const res = await api.put('/api/admin/config/bet-limits', payload)
+    return res.data
+  }
+
+  // --- 封盘管理 ---
+  async function fetchMarketStatus(matchId) {
+    const res = await api.get(`/api/admin/config/market-status/${matchId}`)
+    return res.data
+  }
+
+  async function updateMarketStatus(matchId, marketType, status) {
+    const res = await api.put(`/api/admin/config/market-status/${matchId}/${marketType}`, { status })
+    return res.data
+  }
+
   return {
     isLoggedIn, isAdminLoggedIn, isSuperAdmin, isAdmin, isAgent, user, token,
     matches, matchDetail, oddsCache, myBets, transactions, loading,
@@ -344,7 +366,8 @@ export const useAppStore = defineStore('app', () => {
     fetchAdminUsers, createUser, deleteUser, banUser, modifyCoins,
     fetchAdminAccounts, createAdmin, deleteAdmin, banAdmin, rechargeAgent,
     fetchPendingSettlements, confirmSettlement, cancelMatch,
-    fetchLogs, fetchStats,
+    fetchLogs, fetchStats, fetchBetLimits, updateBetLimits,
+    fetchMarketStatus, updateMarketStatus,
     getMockMatches,
   }
 })

@@ -63,6 +63,7 @@ def create_app(config=None):
         from admin.logs import logs_bp
         from admin.agents import agents_bp
         from admin.customer_stats import customer_stats_bp
+        from admin.config import config_bp
 
         app.register_blueprint(admin_auth_bp)
         app.register_blueprint(users_bp)
@@ -72,6 +73,7 @@ def create_app(config=None):
         app.register_blueprint(logs_bp)
         app.register_blueprint(agents_bp)
         app.register_blueprint(customer_stats_bp)
+        app.register_blueprint(config_bp)
 
         # ===== 手动触发同步（后台执行，避免超时）=====
         import threading

@@ -16,12 +16,13 @@ LEAGUE_NAME_CN = {
     'Italy - Serie A': '意甲',
     'France - Ligue 1': '法甲',
     'International - World Cup': '世界杯',
+    'International Clubs - UEFA Champions League': '欧冠',
 }
 
-# 五大联赛 slug
+# 五大联赛 + 欧冠 slug
 TOP5_LEAGUES = [
     'england-premier-league', 'spain-laliga', 'germany-bundesliga',
-    'italy-serie-a', 'france-ligue-1',
+    'italy-serie-a', 'france-ligue-1', 'international-clubs-uefa-champions-league',
 ]
 
 
