@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/team-logos/(.*)", "destination": "/team-logos/$1" },
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
