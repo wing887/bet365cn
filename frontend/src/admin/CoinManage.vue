@@ -11,6 +11,17 @@
       <span v-if="(store.user?.coin_balance || 0) === 0" class="hint">（请联系上级充值）</span>
     </div>
 
+    <!-- 搜索用户 -->
+    <div class="card search-card">
+      <input
+        v-model="searchQuery"
+        type="text"
+        class="input"
+        placeholder="搜索用户名或昵称..."
+        @input="onSearch"
+      />
+    </div>
+
     <!-- 操作表单 -->
     <div class="card form-card">
       <div class="form-title">
@@ -40,7 +51,7 @@
         <table class="table">
           <thead>
             <tr>
-              <th>用户</th>
+              <th>昵称</th>
               <th>用户名</th>
               <th>当前金币</th>
               <th>最后登录</th>
@@ -74,6 +85,15 @@ const store = useAppStore()
 const showToast = inject('showToast')
 const selectedUser = ref('')
 const coinAmount = ref(0)
+const searchQuery = ref('')
+let searchTimer = null
+
+function onSearch() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    await store.fetchAdminUsers(searchQuery.value)
+  }, 300)
+}
 
 async function doAdd() {
   if (!selectedUser.value || coinAmount.value <= 0) {
@@ -87,6 +107,8 @@ async function doAdd() {
     }
     showToast(`成功加 ${coinAmount.value} 金币`)
     coinAmount.value = 0
+    // 刷新列表更新余额
+    await store.fetchAdminUsers(searchQuery.value)
   } catch (e) {
     showToast(e.response?.data?.error || '操作失败', 'error')
   }
@@ -101,6 +123,7 @@ async function doDeduct() {
     await store.modifyCoins(selectedUser.value, -coinAmount.value)
     showToast(`成功扣减 ${coinAmount.value} 金币`)
     coinAmount.value = 0
+    await store.fetchAdminUsers(searchQuery.value)
   } catch (e) {
     showToast(e.response?.data?.error || '操作失败', 'error')
   }
@@ -110,3 +133,13 @@ onMounted(async () => {
   await store.fetchAdminUsers()
 })
 </script>
+
+<style scoped>
+.search-card {
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.search-card .input {
+  width: 100%;
+}
+</style>
