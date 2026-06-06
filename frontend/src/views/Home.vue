@@ -70,12 +70,8 @@ import { useAppStore } from '../stores/app'
 
 const store = useAppStore()
 
-// Logo URL: Vercel 上没有静态文件，走服务器
-const logoBase = computed(() => {
-  return window.location.hostname === 'bet365cn.top'
-    ? 'http://125.65.79.20:888/team-logos'
-    : '/team-logos'
-})
+// Logo URL: 通过 Vercel rewrite 代理到服务器（避免 Mixed Content）
+const logoBase = computed(() => '/team-logos')
 
 const leagues = [
   { slug: 'england-premier-league', label: '英超', disabled: false },
