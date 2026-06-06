@@ -74,13 +74,13 @@ const store = useAppStore()
 const logoBase = computed(() => '/team-logos')
 
 const leagues = [
+  { slug: 'international-world-cup', label: '🌍 世界杯', disabled: false, highlight: true },
   { slug: 'england-premier-league', label: '英超', disabled: false },
   { slug: 'spain-laliga', label: '西甲', disabled: false },
   { slug: 'germany-bundesliga', label: '德甲', disabled: false },
   { slug: 'italy-serie-a', label: '意甲', disabled: false },
   { slug: 'france-ligue-1', label: '法甲', disabled: false },
   { slug: 'international-clubs-uefa-champions-league', label: '🏆 欧冠决赛', disabled: false, highlight: true },
-  { slug: 'international-world-cup', label: '🌍 世界杯', disabled: false, highlight: true },
 ]
 
 const selectedLeagues = ref([])
