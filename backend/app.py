@@ -64,6 +64,9 @@ def create_app(config=None):
         from admin.agents import agents_bp
         from admin.customer_stats import customer_stats_bp
         from admin.config import config_bp
+        from admin.matches import matches_bp as admin_matches_bp
+        from admin.odds import odds_bp as admin_odds_bp
+        from admin.bets import bets_bp as admin_bets_bp
 
         app.register_blueprint(admin_auth_bp)
         app.register_blueprint(users_bp)
@@ -74,6 +77,9 @@ def create_app(config=None):
         app.register_blueprint(agents_bp)
         app.register_blueprint(customer_stats_bp)
         app.register_blueprint(config_bp)
+        app.register_blueprint(admin_matches_bp)
+        app.register_blueprint(admin_odds_bp)
+        app.register_blueprint(admin_bets_bp)
 
         # ===== 手动触发同步（后台执行，避免超时）=====
         import threading
