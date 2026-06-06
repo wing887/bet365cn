@@ -252,11 +252,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
 }
 .match-team-col {
   flex: 1;
   text-align: center;
+}
+.team-logo-detail {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 4px;
 }
 .match-team-name {
   font-size: 15px;
