@@ -84,7 +84,7 @@ const leagues = [
   { slug: 'italy-serie-a', label: '意甲', disabled: false },
   { slug: 'france-ligue-1', label: '法甲', disabled: false },
   { slug: 'international-clubs-uefa-champions-league', label: '🏆 欧冠决赛', disabled: false, highlight: true },
-  { slug: 'international-world-cup', label: '世界杯', disabled: true },
+  { slug: 'international-world-cup', label: '🌍 世界杯', disabled: false, highlight: true },
 ]
 
 const selectedLeagues = ref([])

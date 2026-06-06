@@ -93,8 +93,8 @@ def list_matches():
     leagues = request.args.get('leagues')  # comma-separated league slugs
     date_str = request.args.get('date')
 
-    # 基础查询：排除世界杯（未开赛）
-    query = Match.query.filter(Match.league_name != 'International - World Cup')
+    # 基础查询：所有联赛（含世界杯）
+    query = Match.query
 
     # 联赛筛选
     if leagues:
