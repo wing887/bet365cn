@@ -182,10 +182,13 @@ def _get_odds_value(market_type, selection, odds_data):
     """从 odds_data JSON 中获取指定选项的赔率"""
     if market_type == 'ML':
         return float(odds_data.get(selection, 0))
-    elif market_type == 'Spread':
-        return float(odds_data.get(selection, 0))
-    elif market_type == 'Totals':
-        return float(odds_data.get(selection, 0))
+    elif market_type in ('Spread', 'Totals'):
+        # 嵌套结构: {"home": {"line": -0.5, "odds": 1.95}, "away": {"line": 0.5, "odds": 1.85}}
+        #          {"over": {"line": 2.5, "odds": 2.00}, "under": {"line": 2.5, "odds": 1.80}}
+        entry = odds_data.get(selection)
+        if isinstance(entry, dict):
+            return float(entry.get('odds', 0))
+        return float(entry or 0)
     elif market_type == 'CS':
         scores = odds_data.get('scores', [])
         for s in scores:
