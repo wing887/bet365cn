@@ -42,7 +42,9 @@ def create_match():
     # 自动生成 event_id 和 league_slug
     import re
     league_slug = re.sub(r'[^a-z0-9]+', '-', league_name.lower()).strip('-')
-    event_id = f"TEST-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{home_team[:4].upper()}{away_team[:4].upper()}"
+    ts = datetime.utcnow().strftime('%m%d%H%M')
+    evt = f"{home_team[:4]}{away_team[:4]}".upper().replace(' ', '')
+    event_id = f"T{ts}{evt}"[:20]
 
     try:
         match_date = datetime.fromisoformat(match_time.replace('Z', '+00:00'))
