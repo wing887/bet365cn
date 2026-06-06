@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/team-logos/(.*)", "destination": "/team-logos/$1" },
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/api/(.*)", "destination": "http://125.65.79.20:888/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

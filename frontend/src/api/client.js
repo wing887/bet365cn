@@ -1,7 +1,9 @@
 import axios from 'axios'
 
-// 生产环境（Vercel 托管）使用服务器 API；本地开发使用相对路径
-const API_BASE = window.location.hostname === 'bet365cn.top' 
+// API 通过 Vercel rewrite 代理到服务器，使用相对路径避免 Mixed Content
+const API_BASE = ''
+// 生产环境队标使用服务器URL
+const LOGO_BASE = window.location.hostname === 'bet365cn.top'
   ? 'http://125.65.79.20:888'
   : ''
 
