@@ -44,6 +44,15 @@ class Config:
     # 下注配置
     MIN_BET_AMOUNT = 50
     
+    # 滚球配置
+    LIVE_POLL_INTERVAL = 30          # 滚球赔率拉取间隔（秒）
+    LIVE_ODDS_STALE_SECONDS = 30     # 滚球赔率过期阈值（秒）
+    LIVE_MAX_TRACKED_MATCHES = 15    # 最多同时跟踪的滚球比赛数
+    LIVE_DEFAULT_LIMIT_RATIO = 0.6   # 滚球限额比例（相对赛前）
+    
+    # 新盘口类型
+    LIVE_MARKET_TYPES = ['ML', 'Spread', 'Totals', 'CS', 'NG', 'TG', 'BTTS', 'HR']
+    
 
 class DevelopmentConfig(Config):
     DEBUG = True

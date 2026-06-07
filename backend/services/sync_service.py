@@ -77,6 +77,10 @@ def sync_matches():
                 match.scores_p1_home = e['scores_p1_home']
                 match.scores_p1_away = e['scores_p1_away']
                 changed = True
+            if e.get('match_minute') is not None:
+                match.match_minute = e['match_minute']
+            if e.get('match_period') is not None:
+                match.match_period = e['match_period']
             if changed:
                 match.updated_at = datetime.utcnow()
                 updated += 1

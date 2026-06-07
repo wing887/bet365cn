@@ -31,20 +31,29 @@ def place_bet():
     if bet_amount < 50:
         return jsonify({'error': '最低下注50金币'}), 400
 
-    # 检查最大投注限额
-    limit = BetLimit.query.filter_by(market_type=market_type).first()
-    if limit and bet_amount > limit.max_bet_amount:
-        return jsonify({
-            'error': f'{market_type}最大投注{limit.max_bet_amount}金币'
-        }), 400
-
     # 查比赛
     match = Match.query.get(match_id)
     if not match:
         return jsonify({'error': '比赛不存在'}), 404
 
-    if match.status != 'pending':
-        return jsonify({'error': '比赛已开始或已结束，无法下注'}), 400
+    # 赛前下注（pending）或滚球下注（live）均可
+    if match.status not in ('pending', 'live'):
+        return jsonify({'error': '比赛已结束或已取消，无法下注'}), 400
+
+    is_live = (match.status == 'live')
+
+    # 检查最大投注限额（滚球使用独立限额）
+    limit = BetLimit.query.filter_by(market_type=market_type).first()
+    max_allowed = None
+    if limit:
+        if is_live and limit.live_max_bet_amount:
+            max_allowed = limit.live_max_bet_amount
+        elif limit.max_bet_amount:
+            max_allowed = limit.max_bet_amount
+    if max_allowed and bet_amount > max_allowed:
+        return jsonify({
+            'error': f'{market_type}最大投注{max_allowed}金币' + ('（滚球）' if is_live else '')
+        }), 400
 
     # 查赔率
     odds = Odds.query.filter_by(
@@ -60,11 +69,12 @@ def place_bet():
     if odds.status == 'closed':
         return jsonify({'error': '该盘口已关闭'}), 400
 
-    # 检查赔率是否过期（超过10分钟未更新）
+    # 赔率时效校验（滚球30秒，赛前10分钟）
     from datetime import timedelta
+    stale_threshold = timedelta(seconds=30) if is_live else timedelta(minutes=10)
     if odds.updated_at:
         age = datetime.utcnow() - odds.updated_at
-        if age > timedelta(minutes=10):
+        if age > stale_threshold:
             return jsonify({'error': '赔率已过期，请刷新后重试'}), 400
 
     # 计算实际赔率
@@ -105,7 +115,7 @@ def place_bet():
             amount=-bet_amount,
             type='bet_place',
             bet_id=bet.id,
-            note=f"下注: {match.home_team} vs {match.away_team}",
+            note=f"{'滚球' if is_live else '赛前'}下注: {match.home_team} vs {match.away_team}",
         )
         db.session.add(tx)
         db.session.commit()
@@ -121,6 +131,7 @@ def place_bet():
                 'bet_amount': bet_amount,
                 'potential_win': potential_win,
                 'status': 'pending',
+                'is_live': is_live,
             },
             'balance': user.coin_balance,
         })
@@ -170,12 +181,14 @@ def list_bets():
 @bets_bp.route('/api/bets/limits', methods=['GET'])
 @login_required
 def get_bet_limits_public():
-    """读取各盘口最大投注额（普通用户可见）"""
+    """读取各盘口最大投注额（普通用户可见，含滚球限额）"""
     limits = BetLimit.query.all()
     result = {}
+    live_result = {}
     for l in limits:
         result[l.market_type.lower()] = l.max_bet_amount
-    return jsonify({'limits': result})
+        live_result[l.market_type.lower()] = l.live_max_bet_amount or int(l.max_bet_amount * 0.6)
+    return jsonify({'limits': result, 'live_limits': live_result})
 
 
 def _get_odds_value(market_type, selection, odds_data):

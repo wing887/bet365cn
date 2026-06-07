@@ -46,7 +46,8 @@
             <div class="match-vs-area">
               <div v-if="m.status==='pending'" class="match-time-text">{{ store.formatMatchTime(m.match_date) }}</div>
               <div v-else class="match-score-display">{{ m.scores_home }} - {{ m.scores_away }}</div>
-              <div v-if="m.status==='live'" style="font-size:10px;color:var(--red);">进行中</div>
+              <div v-if="m.status==='live' && m.match_minute" style="font-size:13px;color:var(--accent);font-weight:700;">{{ m.match_minute }}'</div>
+              <div v-else-if="m.status==='live'" style="font-size:10px;color:var(--red);">进行中</div>
             </div>
             <div class="match-team-col">
               <img v-if="m.away_logo_id" :src="`${logoBase}/${m.away_logo_id}.png`" class="team-logo" />
@@ -57,6 +58,10 @@
           <div v-if="m.status==='pending'">
             <div v-if="m.has_odds" style="font-size:11px;color:var(--green-text);text-align:center;padding:4px 0;font-weight:600;">点击查看赔率下注</div>
             <div v-else style="font-size:11px;color:var(--text-muted);text-align:center;padding:4px 0;">赔率数据等待中</div>
+          </div>
+          <div v-if="m.status==='live'" style="font-size:11px;text-align:center;padding:4px 0;">
+            <span v-if="m.has_odds" style="color:var(--accent);font-weight:600;">⚡ 滚球进行中 — 点击下注</span>
+            <span v-else style="color:var(--text-muted);">赔率同步中...</span>
           </div>
         </div>
       </div>

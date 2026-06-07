@@ -69,6 +69,8 @@ class Match(db.Model):
     scores_away = db.Column(db.Integer, default=0)
     scores_p1_home = db.Column(db.Integer, default=0)
     scores_p1_away = db.Column(db.Integer, default=0)
+    match_minute = db.Column(db.Integer, nullable=True)      # 滚球比赛当前分钟数
+    match_period = db.Column(db.String(20), nullable=True)   # first_half / half_time / second_half
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -188,6 +190,7 @@ class BetLimit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     market_type = db.Column(db.String(20), unique=True, nullable=False)  # ML/Spread/Totals/CS
     max_bet_amount = db.Column(db.Integer, nullable=False, default=5000)
+    live_max_bet_amount = db.Column(db.Integer, nullable=False, default=3000)  # 滚球独立限额
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     updated_by = db.Column(db.Integer, db.ForeignKey('admin_accounts.id'), nullable=True)
 

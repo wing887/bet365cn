@@ -2,7 +2,7 @@
   <div class="admin-page">
     <router-link to="/admin" class="back-link">← 返回后台</router-link>
     <div class="page-title">投注限额配置</div>
-    <p class="page-desc">设置各盘口的最大投注额，用户下注时不可超过此限额。仅超级管理员可配置。</p>
+    <p class="page-desc">设置各盘口的赛前和滚球最大投注额。仅超级管理员可配置。</p>
 
     <div v-if="loading" class="empty-row">加载中...</div>
 
@@ -13,8 +13,8 @@
           <span class="limit-label">{{ item.label }}</span>
           <span class="limit-code">{{ item.market_type }}</span>
         </div>
-        <div class="limit-body">
-          <label class="input-label">最大投注额</label>
+        <div class="limit-body" style="margin-bottom:8px;">
+          <label class="input-label">赛前限额</label>
           <input
             type="number"
             v-model.number="item.max_bet_amount"
@@ -23,6 +23,17 @@
             class="input limit-input"
           />
           <span class="limit-unit">金币</span>
+        </div>
+        <div class="limit-body">
+          <label class="input-label" style="color:var(--accent);">滚球限额</label>
+          <input
+            type="number"
+            v-model.number="item.live_max_bet_amount"
+            min="1"
+            step="100"
+            class="input limit-input live-input"
+          />
+          <span class="limit-unit" style="color:var(--accent);">金币</span>
         </div>
         <div v-if="item.updated_at" class="limit-updated">
           上次更新：{{ formatTime(item.updated_at) }}
@@ -52,10 +63,10 @@ const saveError = ref('')
 const marketIcons = { ML: '⚽', Spread: '📊', Totals: '🔢', CS: '🎯' }
 
 const limits = reactive([
-  { market_type: 'ML', label: '胜平负', max_bet_amount: 5000, updated_at: null },
-  { market_type: 'Spread', label: '让球盘', max_bet_amount: 5000, updated_at: null },
-  { market_type: 'Totals', label: '大小球', max_bet_amount: 5000, updated_at: null },
-  { market_type: 'CS', label: '波胆', max_bet_amount: 1000, updated_at: null },
+  { market_type: 'ML', label: '胜平负', max_bet_amount: 5000, live_max_bet_amount: 3000, updated_at: null },
+  { market_type: 'Spread', label: '让球盘', max_bet_amount: 5000, live_max_bet_amount: 3000, updated_at: null },
+  { market_type: 'Totals', label: '大小球', max_bet_amount: 5000, live_max_bet_amount: 3000, updated_at: null },
+  { market_type: 'CS', label: '波胆', max_bet_amount: 1000, live_max_bet_amount: 500, updated_at: null },
 ])
 
 function formatTime(iso) {
@@ -72,6 +83,7 @@ onMounted(async () => {
         const found = limits.find(l => l.market_type === item.market_type)
         if (found) {
           found.max_bet_amount = item.max_bet_amount
+          found.live_max_bet_amount = item.live_max_bet_amount || Math.floor(item.max_bet_amount * 0.6)
           found.updated_at = item.updated_at
         }
       }
@@ -88,11 +100,12 @@ async function save() {
   saved.value = false
   const payload = {}
   for (const l of limits) {
-    if (l.max_bet_amount < 1) {
+    if (l.max_bet_amount < 1 || l.live_max_bet_amount < 1) {
       saveError.value = `${l.label} 金额不能小于1`
       return
     }
     payload[l.market_type.toLowerCase()] = l.max_bet_amount
+    payload[`${l.market_type.toLowerCase()}_live`] = l.live_max_bet_amount
   }
   try {
     await store.updateBetLimits(payload)
@@ -115,7 +128,7 @@ async function save() {
 }
 .limits-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -151,11 +164,19 @@ async function save() {
   align-items: center;
   gap: 6px;
 }
+.input-label {
+  font-size: 11px;
+  color: #888;
+  min-width: 55px;
+}
 .limit-input {
   width: 90px;
   text-align: center;
   font-size: 18px;
   font-weight: 700;
+}
+.live-input {
+  border-color: rgba(99,102,241,0.3);
 }
 .limit-unit {
   color: #999;

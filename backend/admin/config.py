@@ -14,7 +14,7 @@ MARKET_LABELS = {'ML': '胜平负', 'Spread': '让球盘', 'Totals': '大小球'
 @config_bp.route('/api/admin/config/bet-limits', methods=['GET'])
 @super_admin_required
 def get_bet_limits():
-    """读取各盘口最大投注额"""
+    """读取各盘口最大投注额（含滚球限额）"""
     limits = BetLimit.query.all()
     result = {}
     for l in limits:
@@ -22,6 +22,7 @@ def get_bet_limits():
             'market_type': l.market_type,
             'label': MARKET_LABELS.get(l.market_type, l.market_type),
             'max_bet_amount': l.max_bet_amount,
+            'live_max_bet_amount': l.live_max_bet_amount or int(l.max_bet_amount * 0.6),
             'updated_at': l.updated_at.isoformat() if l.updated_at else None,
         }
     return jsonify({'limits': result})
@@ -30,19 +31,21 @@ def get_bet_limits():
 @config_bp.route('/api/admin/config/bet-limits', methods=['PUT'])
 @super_admin_required
 def update_bet_limits():
-    """批量更新各盘口最大投注额"""
+    """批量更新各盘口最大投注额（支持赛前+滚球独立设置）"""
     data = request.get_json() or {}
     
     updated = []
     for mt in MARKET_TYPES:
         key = mt.lower()
+        live_key = f'{key}_live'
+        
+        # 赛前限额
         if key in data:
             amount = data[key]
             try:
                 amount = int(amount)
             except (ValueError, TypeError):
                 return jsonify({'error': f'{mt} 的值无效，必须是整数'}), 400
-            
             if amount < 1:
                 return jsonify({'error': f'{mt} 的最大投注不能小于1'}), 400
             
@@ -53,8 +56,26 @@ def update_bet_limits():
             else:
                 limit.max_bet_amount = amount
                 limit.updated_by = request.current_user_id
-            
             updated.append({'market_type': mt, 'max_bet_amount': amount})
+        
+        # 滚球限额
+        if live_key in data:
+            amount = data[live_key]
+            try:
+                amount = int(amount)
+            except (ValueError, TypeError):
+                return jsonify({'error': f'{mt} 滚球限额无效，必须是整数'}), 400
+            if amount < 1:
+                return jsonify({'error': f'{mt} 滚球限额不能小于1'}), 400
+            
+            limit = BetLimit.query.filter_by(market_type=mt).first()
+            if not limit:
+                limit = BetLimit(market_type=mt, max_bet_amount=5000, live_max_bet_amount=amount)
+                db.session.add(limit)
+            else:
+                limit.live_max_bet_amount = amount
+                limit.updated_by = request.current_user_id
+            updated.append({'market_type': mt, 'live_max_bet_amount': amount})
     
     if not updated:
         return jsonify({'error': '没有提供任何有效参数'}), 400
@@ -63,7 +84,7 @@ def update_bet_limits():
     return jsonify({
         'success': True,
         'updated': updated,
-        'message': f'已更新 {len(updated)} 个盘口的投注限额',
+        'message': f'已更新 {len(updated)} 项投注限额配置',
     })
 
 

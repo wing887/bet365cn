@@ -82,6 +82,10 @@ def _translate_match(match):
         'status': match.status,
         'scores_home': match.scores_home,
         'scores_away': match.scores_away,
+        'scores_p1_home': match.scores_p1_home,
+        'scores_p1_away': match.scores_p1_away,
+        'match_minute': match.match_minute,
+        'match_period': match.match_period,
     }
 
 
@@ -183,3 +187,109 @@ def match_detail(match_id):
     result['odds'] = odds_data
 
     return jsonify(result)
+
+
+# ============================================================
+# 滚球 API 端点
+# ============================================================
+
+@matches_bp.route('/api/matches/live', methods=['GET'])
+@login_required
+def live_matches():
+    """滚球比赛列表（实时比分+时间+赔率状态）"""
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    matches = Match.query.filter(
+        Match.status == 'live',
+        Match.match_date >= today - timedelta(days=1)  # 允许昨天的跨日比赛
+    ).order_by(Match.match_date.asc()).limit(30).all()
+
+    match_ids = [m.id for m in matches]
+    odds_map = {}
+    if match_ids:
+        rows = Odds.query.filter(
+            Odds.match_id.in_(match_ids),
+            Odds.bookmaker.like('Bet365%')
+        ).with_entities(Odds.match_id).distinct().all()
+        odds_map = {r[0]: True for r in rows}
+
+    result = []
+    for m in matches:
+        item = _translate_match(m)
+        item['has_odds'] = m.id in odds_map
+        result.append(item)
+
+    return jsonify({'matches': result, 'count': len(result)})
+
+
+@matches_bp.route('/api/matches/<int:match_id>/live-odds', methods=['GET'])
+@login_required
+def live_odds(match_id):
+    """单场滚球全部盘口赔率（含封盘状态+更新时间）"""
+    match = Match.query.get(match_id)
+    if not match:
+        return jsonify({'error': '比赛不存在'}), 404
+
+    result = _translate_match(match)
+
+    odds_list = Odds.query.filter_by(match_id=match.id, bookmaker='Bet365').all()
+    odds_data = {}
+    for o in odds_list:
+        odds_data[o.market_type] = {
+            'market_type': o.market_type,
+            'data': o.odds_data,
+            'status': o.status,
+            'updated_at': o.updated_at.isoformat() if o.updated_at else None,
+        }
+    result['odds'] = odds_data
+
+    # 添加赛场信息
+    result['scores'] = {
+        'home': match.scores_home,
+        'away': match.scores_away,
+        'p1_home': match.scores_p1_home,
+        'p1_away': match.scores_p1_away,
+    }
+
+    return jsonify(result)
+
+
+@matches_bp.route('/api/matches/<int:match_id>/live-poll', methods=['GET'])
+@login_required
+def live_poll(match_id):
+    """轻量轮询端点：返回 hash 判断是否有变化（节省带宽）"""
+    import hashlib
+    import json as _json
+
+    match = Match.query.get(match_id)
+    if not match:
+        return jsonify({'error': '比赛不存在'}), 404
+
+    # 生成赔率 hash
+    odds_list = Odds.query.filter_by(match_id=match.id, bookmaker='Bet365').all()
+    odds_raw = []
+    for o in odds_list:
+        odds_raw.append({
+            'mt': o.market_type,
+            'd': o.odds_data,
+            's': o.status,
+            'u': o.updated_at.isoformat() if o.updated_at else '',
+        })
+    odds_hash = hashlib.md5(_json.dumps(odds_raw, sort_keys=True).encode()).hexdigest()
+
+    # 生成比分 hash
+    scores_hash = hashlib.md5(
+        f"{match.scores_home}:{match.scores_away}:{match.scores_p1_home}:{match.scores_p1_away}"
+        .encode()
+    ).hexdigest()
+
+    return jsonify({
+        'changed': True,  # 前端根据此字段和上次hash比对
+        'odds_hash': odds_hash,
+        'scores_hash': scores_hash,
+        'match_minute': match.match_minute,
+        'match_period': match.match_period,
+        'scores_home': match.scores_home,
+        'scores_away': match.scores_away,
+        'scores_p1_home': match.scores_p1_home,
+        'scores_p1_away': match.scores_p1_away,
+    })

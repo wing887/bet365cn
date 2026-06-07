@@ -52,7 +52,9 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function getMarketName(type) {
-    const map = { ML: '胜平负', Spread: '让球盘', Totals: '大小球', CS: '波胆' }
+    const map = { ML: '胜平负', Spread: '让球盘', Totals: '大小球', CS: '波胆',
+                  NG: '下一球', TG: '总进球', BTTS: '双方进球', HR: '半场结果',
+                  NC: '下一角球', R2G: '先到2球', GT: '进球时间' }
     return map[type] || type
   }
 
@@ -186,7 +188,7 @@ export const useAppStore = defineStore('app', () => {
   function getMockMatches() {
     return [
       { id: 1, home_team: '曼城', away_team: '阿森纳', home_logo_id: '65', away_logo_id: '57', league_name_cn: '英超', league_name: 'England - Premier League', match_date: '2026-05-22T19:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
-      { id: 2, home_team: '拜仁慕尼黑', away_team: '多特蒙德', home_logo_id: '5', away_logo_id: '4', league_name_cn: '德甲', league_name: 'Germany - Bundesliga', match_date: '2026-05-22T19:30:00Z', status: 'live', scores_home: 1, scores_away: 0, has_odds: true },
+      { id: 2, home_team: '拜仁慕尼黑', away_team: '多特蒙德', home_logo_id: '5', away_logo_id: '4', league_name_cn: '德甲', league_name: 'Germany - Bundesliga', match_date: '2026-05-22T19:30:00Z', status: 'live', scores_home: 1, scores_away: 0, scores_p1_home: 0, scores_p1_away: 0, match_minute: 67, match_period: 'second_half', has_odds: true },
       { id: 3, home_team: '皇家马德里', away_team: '巴塞罗那', home_logo_id: '86', away_logo_id: '81', league_name_cn: '西甲', league_name: 'Spain - LaLiga', match_date: '2026-05-22T18:00:00Z', status: 'settled', scores_home: 3, scores_away: 1, has_odds: true },
       { id: 4, home_team: '尤文图斯', away_team: '国际米兰', home_logo_id: '109', away_logo_id: '108', league_name_cn: '意甲', league_name: 'Italy - Serie A', match_date: '2026-05-22T20:00:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
       { id: 5, home_team: '巴黎圣日耳曼', away_team: '里昂', home_logo_id: '524', away_logo_id: '523', league_name_cn: '法甲', league_name: 'France - Ligue 1', match_date: '2026-05-22T20:30:00Z', status: 'pending', scores_home: 0, scores_away: 0, has_odds: true },
@@ -201,6 +203,21 @@ export const useAppStore = defineStore('app', () => {
     matchDetail.value = res.data
     if (res.data.odds) oddsCache.value[matchId] = res.data.odds
     return res.data
+  }
+
+  // 滚球专用：获取单场实时赔率
+  async function fetchLiveOdds(matchId) {
+    const res = await api.get(`/api/matches/${matchId}/live-odds`)
+    if (res.data.odds) {
+      oddsCache.value[matchId] = res.data.odds
+    }
+    return res.data
+  }
+
+  // 滚球专用：获取滚球比赛列表
+  async function fetchLiveMatches() {
+    const res = await api.get('/api/matches/live')
+    return res.data.matches || []
   }
 
   function getMatchById(id) {
@@ -361,7 +378,7 @@ export const useAppStore = defineStore('app', () => {
     getMatchStatusText, getBetStatusText, getMarketName, getSelectionLabel,
     formatMatchTime, formatDate, fullDateTime,
     loginUser, loginAdmin, restoreSession, logout, changePassword,
-    fetchMatches, fetchMatchDetail, getMatchById, getOdds, placeBet,
+    fetchMatches, fetchMatchDetail, fetchLiveOdds, fetchLiveMatches, getMatchById, getOdds, placeBet,
     fetchMyBets, fetchTransactions, fetchProfile,
     fetchAdminUsers, createUser, deleteUser, banUser, modifyCoins,
     fetchAdminAccounts, createAdmin, deleteAdmin, banAdmin, rechargeAgent,

@@ -103,6 +103,8 @@ class OddsApiCollector:
                 'scores_away': scores.get('away', 0) or 0,
                 'scores_p1_home': 0,
                 'scores_p1_away': 0,
+                'match_minute': None,  # live_poller 负责估算
+                'match_period': None,
             })
 
             # 半场比分

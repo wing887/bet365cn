@@ -79,7 +79,22 @@ def create_scheduler(app):
     scheduler.add_job(fetch_matches_job, 'interval', minutes=30, id='fetch_matches')
     scheduler.add_job(fetch_odds_job, 'interval', minutes=30, id='fetch_odds')  # ~30场×2次/时=60
     scheduler.add_job(check_settled_job, 'interval', minutes=15, id='check_settled')
+    
+    # 滚球实时赔率同步（30秒/次，~120次/h，需关注 Key 配额）
+    def live_poll_job():
+        if not _acquire_lock('live_poll', ttl=60):
+            return
+        try:
+            with app.app_context():
+                from services.live_poller import live_poll
+                live_poll()
+        except Exception as e:
+            logger.error(f'live_poll 失败: {e}')
+        finally:
+            _release_lock('live_poll')
+    
+    scheduler.add_job(live_poll_job, 'interval', seconds=app.config.get('LIVE_POLL_INTERVAL', 30), id='live_poll')
 
     scheduler.start()
-    logger.info('APScheduler 已启动（3个定时任务）')
+    logger.info(f'APScheduler 已启动（4个定时任务，含滚球 {app.config.get("LIVE_POLL_INTERVAL", 30)}s）')
     return scheduler
