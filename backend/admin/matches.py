@@ -123,6 +123,10 @@ def update_match(match_id):
         match.scores_p1_home = int(data['scores_p1_home'])
     if 'scores_p1_away' in data:
         match.scores_p1_away = int(data['scores_p1_away'])
+    if 'match_minute' in data:
+        match.match_minute = int(data['match_minute'])
+    if 'match_period' in data:
+        match.match_period = data['match_period']
     if 'match_time' in data:
         try:
             match.match_date = datetime.fromisoformat(data['match_time'].replace('Z', '+00:00'))
