@@ -16,19 +16,16 @@ class Config:
     
     # JWT
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-change-me')
-    JWT_ACCESS_TOKEN_EXPIRES = 86400  # 24小时
+    JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get('JWT_EXPIRES', '14400'))  # 默认 4 小时
     
-    # Odds-API.io（双 Key 自动轮换）
-    ODDS_API_KEYS = [
-        key.strip() for key in os.environ.get(
-            'ODDS_API_KEYS',
-            'cbed45cdeb7ea196b7ba4335757cf3d4beaf6654ee2b73b30a29fd2c2b38e46b,'
-            'a26c35648273b834d344da959c383d9700e75e5279d574b81a61887f16b6ea9b,'
-            '5642057727ebd5163744ae40ef81b330df1f88df061463a5941cfcd25a4112c5'
-        ).split(',') if key.strip()
-    ]
+    # Odds-API.io（仅从环境变量读取，不硬编码 Key）
+    _keys_str = os.environ.get('ODDS_API_KEYS', '')
+    ODDS_API_KEYS = [k.strip() for k in _keys_str.split(',') if k.strip()]
     ODDS_API_BASE = 'https://api.odds-api.io/v3'
-    ODDS_API_PROXY = os.environ.get('ODDS_API_PROXY', 'http://172.18.176.1:10808')
+    ODDS_API_PROXY = os.environ.get('ODDS_API_PROXY', '')  # 仅从环境变量读取
+    
+    # CORS 白名单
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
     
     # 联赛配置
     LEAGUES = {
@@ -61,5 +58,4 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-    # PostgreSQL: postgresql://user:pass@host:5432/bet365cn
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://bet365cn:password@localhost:5432/bet365cn')

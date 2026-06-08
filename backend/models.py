@@ -210,3 +210,15 @@ class TeamNameMap(db.Model):
     __table_args__ = (
         db.UniqueConstraint('league_name', 'name_en', name='uq_team_name'),
     )
+
+
+# ============================================================
+# Token 黑名单表（登出用）
+# ============================================================
+class TokenBlacklist(db.Model):
+    __tablename__ = 'token_blacklist'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

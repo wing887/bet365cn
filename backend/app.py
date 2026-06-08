@@ -23,7 +23,7 @@ def create_app(config=None):
     db.init_app(app)
 
     # CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={r"/api/*": {"origins": config.CORS_ORIGINS}})
 
     with app.app_context():
         db.create_all()

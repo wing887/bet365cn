@@ -148,7 +148,12 @@ export const useAppStore = defineStore('app', () => {
     return false
   }
 
-  function logout() {
+  async function logout() {
+    // 调用登出 API
+    if (token.value) {
+      const url = isAdminLoggedIn.value ? '/api/admin/auth/logout' : '/api/auth/logout'
+      api.post(url).catch(() => {})
+    }
     isLoggedIn.value = false
     isAdminLoggedIn.value = false
     isSuperAdmin.value = false

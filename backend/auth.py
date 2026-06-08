@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Tuple
 from flask import request, jsonify, current_app
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # 角色层级
 ROLE_SUPER_ADMIN = 'super_admin'
@@ -15,11 +16,26 @@ ROLE_HIERARCHY = {ROLE_SUPER_ADMIN: 3, ROLE_ADMIN: 2, ROLE_AGENT: 1}
 
 
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    """使用 bcrypt 哈希密码（自动加盐）"""
+    return generate_password_hash(password)
 
 
-def check_password(password: str, password_hash: str) -> bool:
-    return hash_password(password) == password_hash
+def _sha256_hash(password: str) -> str:
+    """旧版 SHA256 哈希（仅用于兼容迁移）"""
+    return 'sha256:' + hashlib.sha256(password.encode()).hexdigest()
+
+
+def check_password(password: str, password_hash: str) -> str | bool:
+    """验证密码，返回 True/False；若成功但为旧格式 SHA256，返回新 bcrypt hash"""
+    # werkzeug 新格式（scrypt: 或 bcrypt $2b$/$2a$）
+    if password_hash.startswith('scrypt:') or password_hash.startswith('$2'):
+        return check_password_hash(password_hash, password)
+    # 旧格式 SHA256（纯 hex 或带 sha256: 前缀）
+    sha256_raw = password_hash.replace('sha256:', '')
+    expected = hashlib.sha256(password.encode()).hexdigest()
+    if sha256_raw == expected:
+        return generate_password_hash(password)  # 返回新 hash 供升级
+    return False
 
 
 def create_token(user_id: int, role: str, is_admin: bool = False) -> dict:
@@ -39,6 +55,35 @@ def create_token(user_id: int, role: str, is_admin: bool = False) -> dict:
 def decode_token(token: str) -> dict:
     """解码 JWT token"""
     return jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+
+
+def is_token_blacklisted(token: str) -> bool:
+    """检查 token 是否在黑名单中"""
+    from models import TokenBlacklist
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    blacklisted = TokenBlacklist.query.filter_by(token_hash=token_hash).first()
+    if blacklisted:
+        # 自动清理过期记录
+        now = datetime.utcnow()
+        if blacklisted.expires_at < now:
+            from models import db
+            db.session.delete(blacklisted)
+            db.session.commit()
+            return False
+        return True
+    return False
+
+
+def blacklist_token(token: str, expires_at: datetime):
+    """将 token 加入黑名单"""
+    from models import db, TokenBlacklist
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    if not TokenBlacklist.query.filter_by(token_hash=token_hash).first():
+        db.session.add(TokenBlacklist(
+            token_hash=token_hash,
+            expires_at=expires_at,
+        ))
+        db.session.commit()
 
 
 def get_client_ip() -> str:
@@ -177,6 +222,37 @@ def can_modify_coins(admin, target_user, amount: int) -> tuple:
 
 
 # ============================================================
+# 登录失败限流（每个账号 5次/15分钟）
+# ============================================================
+from collections import defaultdict
+
+_login_attempts = defaultdict(list)  # {username: [attempt_times]}
+_MAX_ATTEMPTS = 5
+_ATTEMPT_WINDOW = 900  # 15 分钟
+
+
+def check_login_rate_limit(username: str) -> bool:
+    """检查登录频率限制，返回 True 表示允许登录"""
+    now = datetime.utcnow()
+    window_start = now - timedelta(seconds=_ATTEMPT_WINDOW)
+    attempts = [t for t in _login_attempts.get(username, []) if t > window_start]
+    _login_attempts[username] = attempts
+    if len(attempts) >= _MAX_ATTEMPTS:
+        return False
+    return True
+
+
+def record_login_failure(username: str):
+    """记录一次登录失败"""
+    _login_attempts[username].append(datetime.utcnow())
+
+
+def clear_login_attempts(username: str):
+    """登录成功后清除失败记录"""
+    _login_attempts.pop(username, None)
+
+
+# ============================================================
 # 装饰器
 # ============================================================
 
@@ -226,6 +302,8 @@ def _admin_auth(f, allowed_roles: list):
         try:
             token = auth_header[7:]
             payload = decode_token(token)
+            if is_token_blacklisted(token):
+                return jsonify({'error': '登录已失效，请重新登录'}), 401
             if not payload.get('is_admin'):
                 return jsonify({'error': '需要管理员权限'}), 403
             if payload.get('role') not in allowed_roles:
