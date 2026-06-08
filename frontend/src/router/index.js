@@ -19,6 +19,7 @@ const routes = [
   { path: '/admin/customers', name: 'agentCustomers', component: () => import('../admin/CustomerStats.vue'), meta: { title: '客户统计', requiresAdmin: true } },
   { path: '/admin/bet-limits', name: 'adminBetLimits', component: () => import('../admin/BetLimitConfig.vue'), meta: { title: '投注限额', requiresAdmin: true } },
   { path: '/admin/market-status', name: 'adminMarketStatus', component: () => import('../admin/MarketStatus.vue'), meta: { title: '封盘管理', requiresAdmin: true } },
+  { path: '/admin/match-bets', name: 'adminMatchBets', component: () => import('../admin/MatchBets.vue'), meta: { title: '下注核对', requiresAdmin: true } },
 ]
 
 const router = createRouter({

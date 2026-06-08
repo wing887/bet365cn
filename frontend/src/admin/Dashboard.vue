@@ -47,6 +47,7 @@
       <router-link to="/admin/stats" class="admin-nav-item">📊 金币统计</router-link>
       <router-link v-if="store.isSuperAdmin" to="/admin/bet-limits" class="admin-nav-item">🎲 投注限额</router-link>
       <router-link v-if="store.isSuperAdmin" to="/admin/market-status" class="admin-nav-item">🚫 封盘管理</router-link>
+      <router-link to="/admin/match-bets" class="admin-nav-item">📋 下注核对</router-link>
     </div>
 
     <!-- 待结算提醒（仅超管） -->
