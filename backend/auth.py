@@ -3,7 +3,7 @@ import jwt
 import hashlib
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from flask import request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -25,7 +25,7 @@ def _sha256_hash(password: str) -> str:
     return 'sha256:' + hashlib.sha256(password.encode()).hexdigest()
 
 
-def check_password(password: str, password_hash: str) -> str | bool:
+def check_password(password: str, password_hash: str) -> Union[str, bool]:
     """验证密码，返回 True/False；若成功但为旧格式 SHA256，返回新 bcrypt hash"""
     # werkzeug 新格式（scrypt: 或 bcrypt $2b$/$2a$）
     if password_hash.startswith('scrypt:') or password_hash.startswith('$2'):
