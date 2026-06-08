@@ -58,7 +58,9 @@ class OddsApiCollector:
                 if status == 404:
                     return []
                 if status == 429:
-                    raise
+                    if self._switch_key():
+                        continue
+                    raise Exception('所有 API key 配额已耗尽')
                 raise
             except requests.exceptions.RequestException:
                 raise
