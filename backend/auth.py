@@ -133,6 +133,22 @@ def can_view_log(admin, log) -> bool:
     return False
 
 
+# ============================================================
+# 智能搜索工具
+# ============================================================
+
+def smart_search(field, query):
+    """大小写不敏感 + 多词搜索（空格分隔，AND 逻辑）。
+    
+    使用 ilike 替代 contains，解决 PostgreSQL 区分大小写问题。
+    多词场景下每个词都必须匹配（如 "zhang 三" 要求同时含 zhang 和 三）。
+    """
+    from sqlalchemy import and_, true
+    terms = query.strip().split()
+    filters = [field.ilike(f'%{t}%') for t in terms if t]
+    return and_(*filters) if filters else true()
+
+
 def can_modify_coins(admin, target_user, amount: int) -> tuple:
     """
     检查管理员是否有权对目标用户进行金币操作。

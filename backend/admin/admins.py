@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify
 from models import db, AdminAccount, OperationLog
 from auth import (admin_or_above, super_admin_required,
-                  hash_password, get_client_ip, can_create_role, can_ban_admin,
+                  hash_password, get_client_ip, can_create_role, can_ban_admin, smart_search,
                   ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_AGENT)
 
 admins_bp = Blueprint('admin_admins', __name__)
@@ -24,14 +24,21 @@ def _log_action(action, target_type, target_id, detail):
 @admins_bp.route('/api/admin/admins', methods=['GET'])
 @admin_or_above
 def list_admins():
-    """管理员列表（按权限过滤）
+    """管理员列表（按权限过滤 + 搜索）
     super_admin → 看到全部管理员
     admin → 只能看到 agent
+    参数: ?q=关键词（大小写不敏感搜索用户名）
     """
+    q = request.args.get('q', '').strip()
     if request.current_user_role == ROLE_SUPER_ADMIN:
-        admins = AdminAccount.query.order_by(AdminAccount.created_at.desc()).all()
+        query = AdminAccount.query
     else:
-        admins = AdminAccount.query.filter_by(role=ROLE_AGENT).order_by(AdminAccount.created_at.desc()).all()
+        query = AdminAccount.query.filter_by(role=ROLE_AGENT)
+
+    if q:
+        query = query.filter(smart_search(AdminAccount.username, q))
+
+    admins = query.order_by(AdminAccount.created_at.desc()).all()
 
     return jsonify({'admins': [{
         'id': a.id, 'username': a.username, 'role': a.role,

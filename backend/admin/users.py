@@ -50,14 +50,17 @@ def list_users():
     if admin.role == ROLE_AGENT:
         query = query.filter_by(created_by_admin_id=admin.id)
 
-    # 搜索
+    # 搜索（大小写不敏感 + 多词跨字段 AND 匹配）
     if q:
-        query = query.filter(
-            db.or_(
-                UserAccount.username.contains(q),
-                UserAccount.nickname.contains(q),
-            )
-        )
+        terms = q.strip().split()
+        for term in terms:
+            if term:
+                query = query.filter(
+                    db.or_(
+                        UserAccount.username.ilike(f'%{term}%'),
+                        UserAccount.nickname.ilike(f'%{term}%'),
+                    )
+                )
 
     users = query.order_by(UserAccount.created_at.desc()).all()
     return jsonify({'users': [_user_to_dict(u) for u in users]})

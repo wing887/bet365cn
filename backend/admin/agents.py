@@ -1,7 +1,7 @@
 # bet365cn — 代理管理 API（超管 + 管理）
 from flask import Blueprint, request, jsonify
 from models import db, AdminAccount, UserAccount, Bet
-from auth import admin_or_above, ROLE_AGENT
+from auth import admin_or_above, ROLE_AGENT, smart_search
 from datetime import datetime
 from sqlalchemy import func
 
@@ -44,7 +44,7 @@ def list_agents():
     # 查询代理列表
     query = AdminAccount.query.filter_by(role=ROLE_AGENT)
     if q:
-        query = query.filter(AdminAccount.username.contains(q))
+        query = query.filter(smart_search(AdminAccount.username, q))
     agents = query.order_by(AdminAccount.created_at.desc()).all()
 
     result = []
