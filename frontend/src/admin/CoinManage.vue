@@ -25,7 +25,7 @@
     <!-- 操作表单 -->
     <div class="card form-card">
       <div class="form-title">
-        {{ store.isAgent ? '给用户加金币' : '增减用户金币' }}
+        {{ store.isAgent ? '增减用户金币' : '增减用户金币' }}
       </div>
       <div class="form-row">
         <select v-model="selectedUser" class="input select-user">
@@ -35,13 +35,11 @@
           </option>
         </select>
         <input v-model.number="coinAmount" type="number" class="input" placeholder="金额" min="0" />
-        <button class="btn btn-accent btn-sm" @click="doAdd">
-          {{ store.isAgent ? '加金币' : '加金币' }}
-        </button>
-        <button v-if="!store.isAgent" class="btn btn-danger btn-sm" @click="doDeduct">减金币</button>
+        <button class="btn btn-accent btn-sm" @click="doAdd">加金币</button>
+        <button class="btn btn-danger btn-sm" @click="doDeduct">减金币</button>
       </div>
       <div v-if="store.isAgent" class="form-hint">
-        将从你的代理余额中扣除 {{ coinAmount || 0 }} 金币
+        加金币：从代理余额扣除；减金币：收回代理余额
       </div>
     </div>
 
@@ -120,8 +118,11 @@ async function doDeduct() {
     return
   }
   try {
-    await store.modifyCoins(selectedUser.value, -coinAmount.value)
-    showToast(`成功扣减 ${coinAmount.value} 金币`)
+    const res = await store.modifyCoins(selectedUser.value, -coinAmount.value)
+    if (res.agent_balance !== undefined && store.user) {
+      store.user.coin_balance = res.agent_balance
+    }
+    showToast(`成功扣减 ${coinAmount.value} 金币（已收回代理余额）`)
     coinAmount.value = 0
     await store.fetchAdminUsers(searchQuery.value)
   } catch (e) {

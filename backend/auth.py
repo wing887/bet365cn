@@ -154,9 +154,9 @@ def can_modify_coins(admin, target_user, amount: int) -> tuple:
     检查管理员是否有权对目标用户进行金币操作。
     返回 (allowed: bool, error_msg: str | None)
     
-    super_admin: +/- 任何人
-    admin: +/- 代理和用户
-    agent: 只能 + 自己创建的用户（从自己余额扣）
+    super_admin: +/- 任何人（不消耗自身余额）
+    admin: +/- 代理和用户（不消耗自身余额）
+    agent: +/- 自己创建的用户（加=代理出，扣=代理收）
     """
     if admin.role == ROLE_SUPER_ADMIN:
         return True, None
@@ -167,10 +167,11 @@ def can_modify_coins(admin, target_user, amount: int) -> tuple:
     if admin.role == ROLE_AGENT:
         if target_user.created_by_admin_id != admin.id:
             return False, '无权操作该用户'
-        if amount < 0:
-            return False, '代理不能减少用户金币'
-        if admin.coin_balance < amount:
-            return False, f'余额不足（当前 {admin.coin_balance}，需要 {amount}）'
+        if amount > 0:
+            # 加金币：代理出
+            if admin.coin_balance < amount:
+                return False, f'余额不足（当前 {admin.coin_balance}，需要 {amount}）'
+        # amount < 0 扣金币：代理收，只需检查用户余额（在 coins.py 里检查）
         return True, None
     return False, '无权操作'
 

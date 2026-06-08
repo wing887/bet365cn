@@ -26,7 +26,7 @@ def modify_coins(user_id):
     
     super_admin: +/- 任何人（直接操作用户余额）
     admin: +/- 代理创建的用户
-    agent: 只能 + 自己创建的用户（从代理余额扣除）
+    agent: +/- 自己创建的用户（加=代理出，扣=代理收）
     """
     data = request.get_json() or {}
     try:
@@ -65,9 +65,12 @@ def modify_coins(user_id):
         )
         db.session.add(tx)
 
-        # 代理：扣减自己的余额
-        if admin.role == ROLE_AGENT and amount > 0:
-            admin.coin_balance -= amount
+        # 代理：加金币从代理余额扣，扣金币收回代理余额
+        if admin.role == ROLE_AGENT:
+            if amount > 0:
+                admin.coin_balance -= amount
+            else:
+                admin.coin_balance += abs(amount)
 
         _log_action(
             action='金币操作',
