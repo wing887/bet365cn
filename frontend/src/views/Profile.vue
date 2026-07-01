@@ -1,8 +1,21 @@
 <template>
-  <div><div class="page-title">个人中心</div>
-    <div class="card"><div style="text-align:center;padding:14px 0;"><div class="profile-avatar">U</div><div style="font-size:18px;font-weight:800;margin-top:4px;">{{ store.user?.nickname }}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">账号：{{ store.user?.username }}</div><div style="font-size:15px;color:var(--b365-green);font-weight:700;margin-top:6px;">🪙 {{ store.user?.coin_balance }} 金币</div></div></div>
-    <div class="card" style="margin-top:8px;"><div style="padding:12px 14px;"><div class="section-title" style="padding:0 0 8px 0;">修改密码</div><input v-model="oldPwd" type="password" class="input" placeholder="原密码" style="margin-bottom:8px;" /><input v-model="newPwd" type="password" class="input" placeholder="新密码" style="margin-bottom:8px;" /><button class="btn btn-primary btn-block btn-sm" :disabled="changing" @click="changePwd">{{ changing?'修改中...':'确认修改' }}</button><div v-if="pwdError" style="color:var(--red);font-size:12px;margin-top:6px;text-align:center;">{{ pwdError }}</div></div></div>
-    <div style="padding:14px;text-align:center;"><button class="btn btn-outline btn-block" @click="logout">退出登录</button></div>
+  <div>
+    <div class="score_board"><div class="score_league">个人中心</div></div>
+    <div class="acc_user" style="display:flex;flex-direction:column;align-items:center;padding:20px;" v-if="store.user">
+      <div style="font-size:18px;font-weight:700;">{{ store.user.nickname }}</div>
+      <div style="font-size:24px;font-weight:900;color:var(--gold);margin-top:4px;">🪙 {{ store.user.coin_balance }} 金币</div>
+    </div>
+    <div class="acc_menu">
+      <div class="acc_item" @click="router.push('/my-bets')">投注记录</div>
+      <div class="acc_item" @click="router.push('/my-coins')">金币记录</div>
+      <div class="acc_item" @click="logout">退出登录</div>
+    </div>
   </div>
 </template>
-<script setup>import { ref, inject } from 'vue'; import { useRouter } from 'vue-router'; import { useAppStore } from '../stores/app'; const store = useAppStore(); const router = useRouter(); const showToast = inject('showToast'); const oldPwd = ref(''); const newPwd = ref(''); const changing = ref(false); const pwdError = ref(''); async function changePwd(){if(!oldPwd.value||!newPwd.value){pwdError.value='请填写密码';return}changing.value=true;pwdError.value='';try{await store.changePassword(oldPwd.value,newPwd.value);showToast('密码修改成功');oldPwd.value='';newPwd.value=''}catch(e){pwdError.value=e.response?.data?.error||'修改失败'}finally{changing.value=false}} function logout(){store.logout();router.push('/login')}</script>
+<script setup>
+import { useRouter } from 'vue-router'
+import { useAppStore } from '../stores/app'
+const router = useRouter()
+const store = useAppStore()
+function logout() { store.logout(); router.push('/login') }
+</script>
